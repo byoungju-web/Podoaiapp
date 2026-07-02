@@ -1,0 +1,2021 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Pododa · 가게→메뉴→주문 공개 URL</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+:root{
+  --paper:#FBF8FF; --ink:#1B1024; --sub:#7A6B8C;
+  --grape:#6D28D9; --grape-d:#4C1D95; --grape-soft:#EFE8FB;
+  --order:#FF6A3D; --order-d:#E8531F;
+  --ok:#10B981; --line:#ECE3F7; --card:#FFFFFF;
+  --shadow:0 12px 34px rgba(76,29,149,.10);
+  --shadow-sm:0 4px 14px rgba(76,29,149,.07);
+  --r:20px; --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,monospace;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0}
+body{
+  font-family:"Pretendard Variable",Pretendard,system-ui,sans-serif;
+  background:#EDE6F6; color:var(--ink);
+  display:flex; justify-content:center;
+  min-height:100vh; font-size:15px; line-height:1.5;
+}
+button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}
+input,textarea{font-family:inherit}
+img{display:block;max-width:100%}
+
+/* phone frame */
+#app{
+  width:100%; max-width:430px; background:var(--paper);
+  min-height:100vh; position:relative;
+  display:flex; flex-direction:column;
+  box-shadow:0 0 60px rgba(27,16,36,.18);
+}
+
+/* ===== route bar (signature) ===== */
+.routebar{
+  position:sticky; top:0; z-index:30;
+  background:linear-gradient(135deg,#2A1244,#4C1D95);
+  color:#fff; padding:11px 14px 12px;
+}
+.routebar .brand{display:flex;align-items:center;gap:7px;font-weight:800;font-size:13px;letter-spacing:.3px;opacity:.92;margin-bottom:8px}
+.routebar .dot{width:7px;height:7px;border-radius:50%;background:var(--order);box-shadow:0 0 0 3px rgba(255,106,61,.25)}
+.urlpill{
+  display:flex; align-items:center; gap:8px;
+  background:rgba(255,255,255,.12); border:1px solid rgba(255,255,255,.16);
+  border-radius:12px; padding:9px 11px;
+}
+.urlpill .lock{font-size:12px;opacity:.7}
+.urlpill .url{
+  font-family:var(--mono); font-size:12px; color:#EBDDFF;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis; flex:1;
+  letter-spacing:-.2px;
+}
+.urlpill .url b{color:#fff}
+.urlpill .copy{
+  font-size:11px;font-weight:700;color:#fff;background:rgba(255,255,255,.16);
+  padding:5px 9px;border-radius:8px;white-space:nowrap;
+}
+.urlpill .copy:active{background:rgba(255,255,255,.3)}
+
+/* ===== view ===== */
+#view{flex:1;padding:16px 16px 96px;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.hd{margin:4px 2px 14px}
+.hd h1{font-size:24px;font-weight:900;letter-spacing:-.6px;margin:0 0 4px;line-height:1.2}
+.hd p{margin:0;color:var(--sub);font-size:13px}
+.eyebrow{font-size:11px;font-weight:800;letter-spacing:1.4px;color:var(--grape);text-transform:uppercase;margin-bottom:6px}
+
+.back{display:inline-flex;align-items:center;gap:4px;color:var(--grape);font-weight:700;font-size:13px;margin-bottom:10px}
+
+/* search */
+.search{display:flex;align-items:center;gap:8px;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:11px 14px;box-shadow:var(--shadow-sm);margin-bottom:18px}
+.search input{border:none;outline:none;flex:1;font-size:14px;background:transparent}
+.search .ic{font-size:15px;opacity:.5}
+
+/* example deeplinks */
+.deeplinks{margin-bottom:20px}
+.deeplinks .lab{font-size:11px;font-weight:800;color:var(--sub);letter-spacing:.4px;margin-bottom:8px}
+.dl{display:flex;align-items:center;gap:9px;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-bottom:7px;box-shadow:var(--shadow-sm)}
+.dl .arrow{margin-left:auto;color:var(--grape);font-weight:800;font-size:16px}
+.dl code{font-family:var(--mono);font-size:11.5px;color:var(--grape-d);letter-spacing:-.3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* store grid */
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:11px}
+.store{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:15px 14px;box-shadow:var(--shadow-sm);transition:transform .12s}
+.store:active{transform:scale(.97)}
+.store .emoji{font-size:30px;margin-bottom:8px}
+.store .nm{font-weight:800;font-size:15px;letter-spacing:-.3px}
+.store .meta{font-size:11.5px;color:var(--sub);margin-top:3px}
+.store .tag{display:inline-block;font-size:10px;font-weight:800;color:var(--grape);background:var(--grape-soft);padding:3px 7px;border-radius:6px;margin-top:9px}
+
+/* store hero */
+.shero{background:linear-gradient(135deg,var(--grape),var(--grape-d));border-radius:var(--r);padding:20px;color:#fff;margin-bottom:18px;box-shadow:var(--shadow)}
+.shero .e{font-size:40px}
+.shero h2{font-size:22px;font-weight:900;margin:8px 0 2px;letter-spacing:-.5px}
+.shero .sub{font-size:12.5px;opacity:.85}
+.shero .chips{display:flex;gap:6px;margin-top:12px;flex-wrap:wrap}
+.shero .chip{font-size:11px;font-weight:700;background:rgba(255,255,255,.16);padding:5px 9px;border-radius:8px}
+
+/* menu list */
+.sec-t{font-size:13px;font-weight:800;color:var(--sub);letter-spacing:.4px;margin:6px 2px 10px}
+.menu{display:flex;align-items:center;gap:13px;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:13px;margin-bottom:9px;box-shadow:var(--shadow-sm);transition:transform .12s}
+.menu:active{transform:scale(.985)}
+.menu .ph{width:54px;height:54px;border-radius:12px;background:var(--grape-soft);display:flex;align-items:center;justify-content:center;font-size:26px;flex-shrink:0;overflow:hidden}
+.menu .ph img{width:100%;height:100%;object-fit:cover}
+.menu .info{flex:1;min-width:0}
+.menu .info .nm{font-weight:800;font-size:15px;letter-spacing:-.3px}
+.menu .info .ds{font-size:11.5px;color:var(--sub);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.menu .info .pr{font-weight:800;font-size:14px;color:var(--order);margin-top:5px}
+.menu .go{color:var(--grape);font-weight:800;font-size:20px}
+
+/* order screen */
+.ph-big{width:100%;height:200px;border-radius:var(--r);background:var(--grape-soft);display:flex;align-items:center;justify-content:center;font-size:84px;margin-bottom:16px;overflow:hidden}
+.ph-big img{width:100%;height:100%;object-fit:cover}
+.o-store{font-size:12px;font-weight:800;color:var(--grape);letter-spacing:.3px}
+.o-name{font-size:24px;font-weight:900;letter-spacing:-.6px;margin:3px 0}
+.o-price{font-size:20px;font-weight:900;color:var(--order)}
+.optblock{margin-top:20px}
+.optblock .ot{font-size:13px;font-weight:800;margin-bottom:9px}
+.opts{display:flex;gap:8px;flex-wrap:wrap}
+.opt{border:1.5px solid var(--line);background:var(--card);border-radius:12px;padding:9px 15px;font-weight:700;font-size:13px;color:var(--sub)}
+.opt.on{border-color:var(--grape);background:var(--grape-soft);color:var(--grape-d)}
+.qty{display:flex;align-items:center;gap:0;border:1.5px solid var(--line);border-radius:12px;width:fit-content;overflow:hidden}
+.qty button{width:42px;height:42px;font-size:20px;font-weight:800;color:var(--grape);background:var(--card)}
+.qty button:active{background:var(--grape-soft)}
+.qty span{width:46px;text-align:center;font-weight:800;font-size:16px}
+
+/* url share card */
+.urlcard{margin-top:22px;background:#FAF6FF;border:1.5px dashed #D9C8F0;border-radius:16px;padding:14px}
+.urlcard .t{font-size:11px;font-weight:800;color:var(--grape);letter-spacing:.4px;margin-bottom:8px;display:flex;align-items:center;gap:6px}
+.urlcard .u{font-family:var(--mono);font-size:11.5px;color:var(--grape-d);word-break:break-all;background:#fff;border:1px solid var(--line);border-radius:9px;padding:9px 10px}
+.urlcard .acts{display:flex;gap:8px;margin-top:10px}
+.urlcard .acts button{flex:1;padding:10px;border-radius:10px;font-weight:800;font-size:12.5px}
+.btn-line{background:#fff;border:1.5px solid var(--grape);color:var(--grape)}
+.btn-line:active{background:var(--grape-soft)}
+
+/* sticky cta */
+.cta-bar{position:fixed;bottom:64px;left:50%;transform:translateX(-50%);width:100%;max-width:430px;padding:12px 16px;background:linear-gradient(transparent,var(--paper) 28%);z-index:25}
+.cta{width:100%;background:var(--order);color:#fff;font-weight:900;font-size:16px;padding:16px;border-radius:16px;box-shadow:0 8px 24px rgba(255,106,61,.4);display:flex;align-items:center;justify-content:center;gap:8px}
+.cta:active{background:var(--order-d)}
+.cta.grape{background:var(--grape);box-shadow:0 8px 24px rgba(109,40,217,.35)}
+.cta.grape:active{background:var(--grape-d)}
+
+/* checkout sheet */
+.sheet-bg{position:fixed;inset:0;background:rgba(27,16,36,.5);z-index:40;display:flex;align-items:flex-end;justify-content:center;animation:fade .2s}
+.sheet{width:100%;max-width:430px;background:var(--paper);border-radius:24px 24px 0 0;padding:22px 18px calc(22px + env(safe-area-inset-bottom));animation:up .26s cubic-bezier(.2,.9,.3,1)}
+.sheet h3{font-size:19px;font-weight:900;margin:0 0 4px;letter-spacing:-.4px}
+.sheet .sd{font-size:12.5px;color:var(--sub);margin-bottom:16px}
+.row{display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid var(--line)}
+.row .l{font-weight:700;font-size:14px}
+.row .l small{display:block;color:var(--sub);font-weight:500;font-size:11.5px;margin-top:2px}
+.row .r{font-weight:800;font-size:14px}
+.total{display:flex;justify-content:space-between;align-items:center;margin:14px 0 6px}
+.total .l{font-size:14px;font-weight:700}
+.total .r{font-size:22px;font-weight:900;color:var(--order)}
+.handoff{background:var(--grape-soft);border-radius:12px;padding:12px;font-size:12px;color:var(--grape-d);font-weight:600;margin:14px 0;display:flex;gap:8px;line-height:1.45}
+.handoff .i{font-size:16px;flex-shrink:0}
+
+/* AI order */
+/* AI order */
+.ai-cap{font-size:11px;font-weight:800;color:var(--grape);letter-spacing:.4px;margin-bottom:8px;display:flex;align-items:center;gap:7px}
+.ai-cap .ai-on{font-weight:700;color:var(--ok);background:rgba(16,185,129,.1);padding:3px 8px;border-radius:7px}
+.ai-cap .ai-off{font-weight:700;color:var(--order);background:rgba(255,106,61,.1);padding:3px 8px;border-radius:7px}
+.ai-spin{display:flex;gap:6px;padding:6px 2px 2px}
+.ai-spin span{width:8px;height:8px;border-radius:50%;background:var(--grape);animation:bounce 1s infinite}
+.ai-spin span:nth-child(2){animation-delay:.15s}
+.ai-spin span:nth-child(3){animation-delay:.3s}
+@keyframes bounce{0%,100%{opacity:.3;transform:translateY(0)}50%{opacity:1;transform:translateY(-5px)}}
+.ai-input{background:var(--card);border:1.5px solid var(--line);border-radius:16px;padding:14px;box-shadow:var(--shadow-sm);margin-bottom:14px}
+.ai-input textarea{width:100%;border:none;outline:none;resize:none;font-size:15px;min-height:48px;background:transparent}
+.ai-input .bar{display:flex;gap:8px;margin-top:6px}
+.mic{width:46px;height:46px;border-radius:12px;background:var(--grape-soft);color:var(--grape);font-size:20px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.mic.rec{background:var(--order);color:#fff;animation:pulse 1s infinite}
+.send{flex:1;background:var(--grape);color:#fff;font-weight:800;font-size:15px;border-radius:12px}
+.send:active{background:var(--grape-d)}
+.examples{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:20px}
+.ex{font-size:12px;font-weight:700;background:var(--card);border:1px solid var(--line);color:var(--grape-d);padding:8px 12px;border-radius:20px}
+.ex:active{background:var(--grape-soft)}
+
+/* stepper */
+.steps{margin-top:6px}
+.step{display:flex;gap:13px;align-items:flex-start;padding-bottom:4px;opacity:.35;transition:opacity .35s}
+.step.act{opacity:1}
+.step .marker{display:flex;flex-direction:column;align-items:center;flex-shrink:0}
+.step .bullet{width:34px;height:34px;border-radius:50%;background:var(--grape-soft);display:flex;align-items:center;justify-content:center;font-size:16px;border:2px solid transparent;transition:all .3s}
+.step.act .bullet{background:var(--grape);color:#fff}
+.step.done .bullet{background:var(--ok);color:#fff}
+.step .line{width:2px;flex:1;background:var(--line);min-height:18px;margin:2px 0}
+.step:last-child .line{display:none}
+.step .body{padding-top:5px;padding-bottom:14px}
+.step .st{font-weight:800;font-size:14px;letter-spacing:-.2px}
+.step .sv{font-size:12.5px;color:var(--sub);margin-top:2px}
+.step.act .sv{color:var(--grape-d);font-weight:600}
+
+.result-card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:18px;box-shadow:var(--shadow);margin-top:8px;animation:up .3s}
+.result-card .rh{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+.result-card .re{font-size:34px}
+.result-card .rn{font-weight:900;font-size:17px;letter-spacing:-.3px}
+.result-card .rsub{font-size:12px;color:var(--sub)}
+
+/* ===== admin ===== */
+.tabseg{display:flex;background:var(--grape-soft);border-radius:12px;padding:4px;margin-bottom:18px}
+.tabseg button{flex:1;padding:9px;border-radius:9px;font-weight:800;font-size:13px;color:var(--grape)}
+.tabseg button.on{background:#fff;color:var(--grape-d);box-shadow:var(--shadow-sm)}
+.field{margin-bottom:14px}
+.field label{display:block;font-size:12.5px;font-weight:800;margin-bottom:6px;color:var(--ink)}
+.field input,.field textarea{width:100%;border:1.5px solid var(--line);border-radius:12px;padding:12px 13px;font-size:14px;outline:none;background:var(--card)}
+.field input:focus,.field textarea:focus{border-color:var(--grape)}
+.selwrap{position:relative}
+.selwrap select{width:100%;border:1.5px solid var(--line);border-radius:12px;padding:12px 38px 12px 13px;font-size:14px;outline:none;background:var(--card);color:var(--ink);-webkit-appearance:none;appearance:none}
+.selwrap select:focus{border-color:var(--grape)}
+.selwrap .selarrow{position:absolute;right:14px;top:50%;transform:translateY(-50%);color:var(--grape);font-size:13px;pointer-events:none}
+.field .hint{font-size:11px;color:var(--sub);margin-top:5px}
+.uploader{border:1.5px dashed #D9C8F0;border-radius:14px;padding:18px;text-align:center;background:#FAF6FF;color:var(--grape);font-weight:700;font-size:13px}
+.uploader img{width:84px;height:84px;border-radius:12px;object-fit:cover;margin:0 auto 8px}
+.gen-url{background:var(--ink);color:#fff;border-radius:14px;padding:14px;margin-top:6px}
+.gen-url .gt{font-size:11px;font-weight:800;color:#C9B6E8;letter-spacing:.5px;margin-bottom:7px}
+.gen-url .gu{font-family:var(--mono);font-size:12px;color:#fff;word-break:break-all;line-height:1.6}
+.gen-url .gu .hl{color:var(--order)}
+#qrbox{display:flex;justify-content:center;margin-top:14px}
+#qrbox img,#qrbox canvas{border-radius:10px;border:6px solid #fff;box-shadow:var(--shadow-sm)}
+
+.mini-menu{display:flex;align-items:center;gap:11px;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:11px;margin-bottom:8px;box-shadow:var(--shadow-sm)}
+.mini-menu .me{width:42px;height:42px;border-radius:10px;background:var(--grape-soft);display:flex;align-items:center;justify-content:center;font-size:20px;overflow:hidden;flex-shrink:0}
+.mini-menu .me img{width:100%;height:100%;object-fit:cover}
+.mini-menu .mi{flex:1;min-width:0}
+.mini-menu .mi .mn{font-weight:800;font-size:14px}
+.mini-menu .mi .mu{font-family:var(--mono);font-size:10.5px;color:var(--sub);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:2px}
+.mini-menu .mp{font-weight:800;color:var(--order);font-size:13px}
+.mini-menu .qr,.mini-menu .del{width:34px;height:34px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:15px}
+.mini-menu .qr{background:var(--grape-soft);color:var(--grape)}
+.mini-menu .del{color:#C0476B}
+
+/* menu state: soldout, badges, banner */
+.menu.soldout{opacity:.55}
+.menu.soldout .ph{filter:grayscale(.7)}
+.badge-sold{display:inline-block;font-size:10px;font-weight:800;color:#fff;background:#C0476B;padding:2px 6px;border-radius:6px;vertical-align:middle;margin-left:4px}
+.sold-banner{background:#FBE9EF;color:#C0476B;font-weight:800;font-size:13px;text-align:center;padding:11px;border-radius:12px;margin-bottom:14px}
+
+/* admin per-menu control card */
+.mcard{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:11px;margin-bottom:9px;box-shadow:var(--shadow-sm)}
+.ctrls{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px;padding-top:10px;border-top:1px solid var(--line)}
+.ctrl{font-size:11.5px;font-weight:800;padding:7px 10px;border-radius:9px;border:1.5px solid var(--line);background:#fff;color:var(--sub)}
+.ctrl:active{transform:scale(.96)}
+.ctrl.vis-public{border-color:#BFE6D2;background:#EAF8F1;color:#0F8A5F}
+.ctrl.vis-unlisted{border-color:#E6D9B0;background:#FBF4DE;color:#9A7A1E}
+.ctrl.vis-private{border-color:#E6C3CF;background:#FBEAF0;color:#B23A63}
+.ctrl.on{border-color:var(--grape);background:var(--grape-soft);color:var(--grape-d)}
+.ctrl.sold{border-color:#C0476B;background:#FBE9EF;color:#C0476B}
+
+/* store pause (휴무) */
+.pausebar{display:flex;align-items:center;gap:12px;background:#EAF8F1;border:1.5px solid #BFE6D2;border-radius:16px;padding:14px;margin-bottom:16px}
+.pausebar.off{background:#FBE9EF;border-color:#E6C3CF}
+.pausebar .pb-info{flex:1;min-width:0}
+.pausebar .pb-t{font-weight:900;font-size:15px;color:#0F8A5F}
+.pausebar.off .pb-t{color:#B23A63}
+.pausebar .pb-s{font-size:11.5px;color:var(--sub);margin-top:2px}
+.pausebar .pb-btn{flex-shrink:0;font-weight:800;font-size:13px;padding:10px 14px;border-radius:11px;background:#0F8A5F;color:#fff}
+.pausebar.off .pb-btn{background:#B23A63}
+.pausebar .pb-btn:active{transform:scale(.96)}
+.badge-rest{display:inline-block;font-size:10px;font-weight:800;color:#fff;background:#9A7A1E;padding:2px 6px;border-radius:6px;vertical-align:middle;margin-left:4px}
+.store.closed{opacity:.6}
+.store.closed .emoji{filter:grayscale(.7)}
+.shero.rest{background:linear-gradient(135deg,#7A6B8C,#4A3F58)}
+
+/* shopping: seller picker */
+.sellers{display:flex;flex-direction:column;gap:7px}
+.seller{display:flex;align-items:center;justify-content:space-between;border:1.5px solid var(--line);background:var(--card);border-radius:12px;padding:11px 13px;text-align:left}
+.seller.on{border-color:var(--grape);background:var(--grape-soft)}
+.seller .se-n{font-weight:700;font-size:13.5px}
+.seller .se-low{display:inline-block;font-size:10px;font-weight:800;color:#fff;background:var(--ok);padding:2px 6px;border-radius:6px;margin-left:5px}
+.seller .se-p{font-weight:800;font-size:14px;color:var(--order)}
+
+/* home → shop entry */
+.bigentry{display:flex;align-items:center;gap:13px;background:linear-gradient(135deg,#FF6A3D,#E8531F);color:#fff;border-radius:18px;padding:16px;margin-bottom:18px;box-shadow:0 8px 22px rgba(255,106,61,.32)}
+.bigentry .be-e{font-size:30px}
+.bigentry .be-h{font-weight:900;font-size:16px;letter-spacing:-.3px}
+.bigentry .be-s{font-size:11.5px;opacity:.92;margin-top:2px}
+.bigentry .be-t{flex:1;min-width:0}
+.bigentry .be-go{font-size:24px;font-weight:800;opacity:.9}
+.badge-mine{display:inline-block;font-size:10px;font-weight:800;color:var(--grape-d);background:var(--grape-soft);padding:2px 7px;border-radius:6px;vertical-align:middle;margin-left:4px}
+
+/* seller: image strip (swipe, up to 8) */
+.imgstrip{display:flex;gap:9px;overflow-x:auto;-webkit-overflow-scrolling:touch;padding:4px 2px 8px;scroll-snap-type:x proximity}
+.imgstrip::-webkit-scrollbar{height:4px}
+.imgstrip::-webkit-scrollbar-thumb{background:var(--line);border-radius:4px}
+.ithumb{position:relative;flex:0 0 auto;width:96px;height:96px;border-radius:12px;overflow:hidden;border:1.5px solid var(--line);scroll-snap-align:start}
+.ithumb img{width:100%;height:100%;object-fit:cover}
+.ithumb .ibadge{position:absolute;left:5px;bottom:5px;font-size:9px;font-weight:800;color:#fff;background:var(--grape);padding:2px 6px;border-radius:6px}
+.ithumb .idel{position:absolute;top:3px;right:3px;width:22px;height:22px;border-radius:50%;background:rgba(27,16,36,.62);color:#fff;font-size:14px;line-height:1;display:flex;align-items:center;justify-content:center}
+.iadd{flex:0 0 auto;width:96px;height:96px;border-radius:12px;border:1.5px dashed #D9C8F0;background:#FAF6FF;color:var(--grape);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;scroll-snap-align:start}
+.iadd span{font-size:26px;line-height:1}
+.iadd small{font-size:11px;font-weight:700}
+
+/* seller: description card with representative image */
+.desccard{background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.desccard>img{width:100%;max-height:280px;object-fit:cover;display:block}
+.desccard .dctext{padding:13px;font-size:14px;line-height:1.6;white-space:normal;word-break:break-word}
+.desccard .dmeta{font-size:12px;font-weight:800;color:var(--grape);margin-bottom:8px}
+.tagrow{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
+.tagchip{font-size:11px;font-weight:700;color:var(--grape-d);background:var(--grape-soft);padding:4px 9px;border-radius:8px}
+.sugrow{display:flex;flex-wrap:wrap;gap:7px;margin-top:10px}
+.sugchip{font-size:12px;font-weight:800;color:var(--grape);background:#fff;border:1.5px dashed #D9C8F0;padding:7px 11px;border-radius:18px}
+.sugchip:active{background:var(--grape-soft)}
+
+/* product gallery (swipe) */
+.gallery{display:flex;gap:8px;overflow-x:auto;-webkit-overflow-scrolling:touch;border-radius:var(--r);margin-bottom:16px;scroll-snap-type:x mandatory}
+.gallery::-webkit-scrollbar{display:none}
+.gslide{position:relative;flex:0 0 100%;width:100%;aspect-ratio:1/1;border-radius:var(--r);overflow:hidden;background:var(--grape-soft);scroll-snap-align:center}
+.gslide img{width:100%;height:100%;object-fit:cover}
+.gslide .gnum{position:absolute;right:10px;bottom:10px;font-size:12px;font-weight:800;color:#fff;background:rgba(27,16,36,.6);padding:4px 11px;border-radius:11px}
+.okcard{background:#EAF8F1;border:1.5px solid #BFE6D2;color:#0F8A5F;font-weight:800;font-size:14px;border-radius:14px;padding:16px;margin-top:12px;text-align:center}
+.okcard .btn-line{color:#0F8A5F;border-color:#0F8A5F}
+
+/* shopping list: larger product image */
+.menu.shopitem{padding:12px}
+.menu.shopitem .ph{width:104px;height:104px;border-radius:14px;font-size:46px}
+.menu.shopitem .info .nm{font-size:16px}
+.menu.shopitem .info .pr{font-size:15px;margin-top:7px}
+.qrwrap{margin-top:16px;text-align:center}
+.qrwrap .qrt{font-size:13px;font-weight:800;color:var(--ink);margin-bottom:12px}
+.qrwrap .qrt span{font-size:11px;font-weight:700;color:var(--sub);background:var(--grape-soft);padding:3px 8px;border-radius:7px;margin-left:6px}
+.qrwrap #shareQr{display:flex;justify-content:center;margin-bottom:8px}
+.qrwrap #shareQr img,.qrwrap #shareQr canvas{border:6px solid #fff;border-radius:10px;box-shadow:var(--shadow-sm)}
+
+/* collect (AI auto) */
+.src{display:flex;align-items:center;gap:10px;background:var(--card);border:1px solid var(--line);border-radius:13px;padding:12px;margin-bottom:9px;box-shadow:var(--shadow-sm)}
+.src .si{width:38px;height:38px;border-radius:10px;background:var(--grape-soft);display:flex;align-items:center;justify-content:center;font-size:18px}
+.src input{flex:1;border:none;outline:none;font-size:13px;background:transparent;min-width:0}
+.draft-row{display:flex;align-items:center;gap:10px;padding:11px;border-bottom:1px solid var(--line)}
+.draft-row .dn{flex:1;font-weight:700;font-size:13.5px}
+.draft-row .dn small{display:block;color:var(--sub);font-weight:500;font-size:11px;margin-top:1px}
+.draft-row .dp{display:flex;align-items:center;gap:3px}
+.draft-row .dp input{width:74px;border:1.5px solid var(--line);border-radius:9px;padding:7px;font-size:13px;text-align:right;font-weight:700;outline:none}
+.draft-row .dp input:focus{border-color:var(--grape)}
+.draft-row .won{font-size:12px;color:var(--sub);font-weight:700}
+
+.tip{font-size:12px;color:var(--sub);background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px;line-height:1.55;margin-top:14px}
+.tip b{color:var(--grape-d)}
+
+/* bottom nav */
+.tabbar{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:430px;background:#fff;border-top:1px solid var(--line);display:flex;z-index:35;padding-bottom:env(safe-area-inset-bottom)}
+.tabbar button{flex:1;padding:8px 0 7px;display:flex;flex-direction:column;align-items:center;gap:3px;color:var(--sub);font-size:10px;font-weight:700}
+.tabbar button .ti{font-size:23px;line-height:1}
+.tabbar button.on{color:var(--grape)}
+
+.empty{text-align:center;color:var(--sub);padding:40px 20px;font-size:13px}
+.empty .ee{font-size:42px;margin-bottom:10px}
+
+@keyframes up{from{transform:translateY(40px);opacity:0}to{transform:translateY(0);opacity:1}}
+@keyframes fade{from{opacity:0}to{opacity:1}}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(255,106,61,.5)}50%{box-shadow:0 0 0 10px rgba(255,106,61,0)}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+.toast{position:fixed;bottom:130px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;padding:11px 18px;border-radius:12px;font-size:13px;font-weight:700;z-index:60;animation:fade .2s;box-shadow:var(--shadow)}
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="routebar">
+    <div class="brand"><span class="dot"></span> Pododa · 포도AI 주문 링크</div>
+    <div class="urlpill">
+      <span class="lock">🔒</span>
+      <span class="url" id="urlText">yourapp.com/</span>
+      <button class="copy" data-action="copy-route">복사</button>
+    </div>
+  </div>
+  <div id="view"></div>
+  <div class="tabbar">
+    <button data-action="nav" data-to="#/" id="tab-home"><span class="ti">🏠</span>홈</button>
+    <button data-action="nav" data-to="#/shop" id="tab-shop"><span class="ti">🛍️</span>쇼핑</button>
+    <button data-action="nav" data-to="#/sell" id="tab-sell"><span class="ti">🏷️</span>등록</button>
+    <button data-action="go-admin" data-to="#/admin" id="tab-admin"><span class="ti">🏪</span>사장님</button>
+    <button data-action="nav" data-to="#/collect" id="tab-collect"><span class="ti">🤖</span>수집</button>
+    <button data-action="nav" data-to="#/settings" id="tab-settings"><span class="ti">⚙️</span>설정</button>
+  </div>
+</div>
+
+<script>
+"use strict";
+
+/* ---------- storage (localStorage with in-memory fallback) ---------- */
+var mem = {};
+var DB = {
+  get:function(k){ try{ return localStorage.getItem(k); }catch(e){ return (k in mem)?mem[k]:null; } },
+  set:function(k,v){ try{ localStorage.setItem(k,v); }catch(e){ mem[k]=v; } }
+};
+var HOST = "yourapp.com";
+
+/* ---------- seed data ---------- */
+function seed(){
+  if(DB.get("fl_stores")) return;
+  var stores = [
+    { slug:"starbucks", name:"스타벅스", emoji:"☕", cat:"카페", area:"강남역점", menus:[
+        {id:"m1", name:"아이스 아메리카노", price:4500, emoji:"🧊", desc:"진한 에스프레소 + 시원한 물", temps:["ICED","HOT"], sizes:["Tall","Grande","Venti"], defTemp:"ICED", defSize:"Tall"},
+        {id:"m2", name:"카페 라떼", price:5000, emoji:"🥛", desc:"부드러운 스팀 밀크", temps:["ICED","HOT"], sizes:["Tall","Grande","Venti"], defTemp:"HOT", defSize:"Tall"},
+        {id:"m3", name:"자몽 허니 블랙티", price:5900, emoji:"🍵", desc:"상큼한 자몽 + 꿀", temps:["ICED","HOT"], sizes:["Tall","Grande","Venti"], defTemp:"ICED", defSize:"Grande"}
+      ]},
+    { slug:"mcdonalds", name:"맥도날드", emoji:"🍔", cat:"버거", area:"강남대로점", menus:[
+        {id:"m1", name:"빅맥", price:5500, emoji:"🍔", desc:"두 장의 패티, 특제 소스", sizes:["단품","세트","라지세트"], defSize:"세트"},
+        {id:"m2", name:"상하이 버거", price:5400, emoji:"🍗", desc:"바삭한 치킨 패티", sizes:["단품","세트","라지세트"], defSize:"세트"},
+        {id:"m3", name:"감자튀김", price:2400, emoji:"🍟", desc:"겉바속촉", sizes:["미디엄","라지"], defSize:"미디엄"}
+      ]},
+    { slug:"kyochon", name:"교촌치킨", emoji:"🍗", cat:"치킨", area:"역삼점", menus:[
+        {id:"m1", name:"허니콤보", price:20000, emoji:"🍯", desc:"달콤 짭짤 인기 1위", sizes:["1개","2개"], defSize:"1개"},
+        {id:"m2", name:"레드콤보", price:20000, emoji:"🌶️", desc:"매콤한 풍미", sizes:["1개","2개"], defSize:"1개"},
+        {id:"m3", name:"오리지날", price:18000, emoji:"🍗", desc:"간장 베이스 클래식", sizes:["1개","2개"], defSize:"1개"}
+      ]},
+    { slug:"coffeehouse", name:"커피하우스", emoji:"🫖", cat:"카페", area:"연남점", menus:[
+        {id:"m1", name:"아메리카노", price:4000, emoji:"☕", desc:"직접 로스팅한 원두", temps:["ICED","HOT"], sizes:["R","L"], defTemp:"HOT", defSize:"R"}
+      ]}
+  ];
+  DB.set("fl_stores", JSON.stringify(stores));
+}
+function stores(){ return JSON.parse(DB.get("fl_stores")||"[]"); }
+function saveStores(s){ DB.set("fl_stores", JSON.stringify(s)); }
+function cart(){ return JSON.parse(DB.get("fl_cart")||"[]"); }
+function saveCart(c){ DB.set("fl_cart", JSON.stringify(c)); }
+
+/* ---------- shopping data ---------- */
+function seedShops(){
+  if(DB.get("fl_shops")) return;
+  var shops=[
+    { slug:"coupang", name:"쿠팡", emoji:"🛒", products:[
+        {id:"p1", name:"아이폰 17 Pro", emoji:"📱", desc:"Apple 최신 플래그십",
+          options:{ "색상":["내추럴 티타늄","블루","화이트","블랙"], "저장공간":["256GB","512GB","1TB"] },
+          sellers:[ {name:"애플 공식스토어", price:1550000}, {name:"A전자", price:1499000}, {name:"베스트마켓", price:1488000} ]},
+        {id:"p2", name:"에어팟 프로 3", emoji:"🎧", desc:"노이즈 캔슬링 이어버드",
+          options:{ "구성":["단품","애플케어+ 포함"] },
+          sellers:[ {name:"쿠팡 로켓", price:359000}, {name:"디지털존", price:329000} ]},
+        {id:"p3", name:"다이슨 V16 청소기", emoji:"🧹", desc:"무선 스틱 청소기",
+          options:{ "색상":["골드","퍼플"] },
+          sellers:[ {name:"다이슨 공식", price:1090000}, {name:"홈마켓", price:998000} ]}
+      ]},
+    { slug:"11st", name:"11번가", emoji:"🟥", products:[
+        {id:"p1", name:"갤럭시 S26 울트라", emoji:"📱", desc:"삼성 플래그십",
+          options:{ "색상":["티타늄 블랙","티타늄 그레이"], "저장공간":["256GB","512GB"] },
+          sellers:[ {name:"삼성공식", price:1690000}, {name:"모바일파크", price:1599000} ]},
+        {id:"p2", name:"닌텐도 스위치 2", emoji:"🎮", desc:"휴대용 게임기",
+          options:{ "구성":["본체","마리오 패키지"] },
+          sellers:[ {name:"게임존", price:498000}, {name:"토이마트", price:479000} ]}
+      ]},
+    { slug:"navershop", name:"네이버쇼핑", emoji:"🟢", products:[
+        {id:"p1", name:"스탠리 텀블러 1L", emoji:"🥤", desc:"보온·보냉 텀블러",
+          options:{ "색상":["크림","네이비","블랙"] },
+          sellers:[ {name:"스탠리 공식", price:55000}, {name:"리빙샵", price:42900} ]}
+      ]}
+  ];
+  DB.set("fl_shops", JSON.stringify(shops));
+}
+function shops(){ return JSON.parse(DB.get("fl_shops")||"[]"); }
+function saveShops(s){ DB.set("fl_shops", JSON.stringify(s)); }
+function ensureMyshop(){
+  var ss=shops(), ms=null;
+  for(var i=0;i<ss.length;i++){ if(ss[i].slug==="myshop") ms=ss[i]; }
+  if(!ms){ ms={slug:"myshop", name:"내 상점", emoji:"🏷️", mine:true, products:[]}; ss.unshift(ms); saveShops(ss); }
+  return ms;
+}
+function findShop(key){
+  key=dec(key||"").toLowerCase(); var ss=shops();
+  for(var i=0;i<ss.length;i++){ if(ss[i].slug.toLowerCase()===key||ss[i].name.toLowerCase()===key) return ss[i]; }
+  return null;
+}
+function findProduct(shop, key){
+  if(!shop) return null; key=dec(key||"").toLowerCase();
+  for(var i=0;i<shop.products.length;i++){
+    var p=shop.products[i];
+    if(p.name.toLowerCase()===key || (p.id&&p.id.toLowerCase()===key) || p.name.toLowerCase().replace(/\s/g,"")===key.replace(/\s/g,"")) return p;
+  }
+  return null;
+}
+function cheapest(p){
+  if(!p.sellers||!p.sellers.length) return 0;
+  var best=p.sellers[0], idx=0;
+  p.sellers.forEach(function(s,i){ if(s.price<best.price){ best=s; idx=i; } });
+  return idx;
+}
+function productPrice(p){ if(p.sellers&&p.sellers.length) return p.sellers[cheapest(p)].price; return p.price||0; }
+function productThumb(p){ return (p.images&&p.images.length)? '<img src="'+p.images[0]+'">' : p.emoji; }
+
+/* ---------- helpers ---------- */
+function $(s,r){ return (r||document).querySelector(s); }
+function won(n){ return Number(n).toLocaleString("ko-KR")+"원"; }
+function dec(s){ try{ return decodeURIComponent(s); }catch(e){ return s; } }
+function findStore(key){
+  key = dec(key||"").toLowerCase();
+  var ss = stores();
+  for(var i=0;i<ss.length;i++){
+    if(ss[i].slug.toLowerCase()===key || ss[i].name.toLowerCase()===key) return ss[i];
+  }
+  return null;
+}
+function findMenu(store, key){
+  if(!store) return null;
+  key = dec(key||"").toLowerCase();
+  for(var i=0;i<store.menus.length;i++){
+    var m = store.menus[i];
+    if(m.name.toLowerCase()===key || (m.id&&m.id.toLowerCase()===key)) return m;
+  }
+  return null;
+}
+/* visibility / price / soldout helpers */
+function vis(m){ return m.vis||"public"; }              // public | unlisted | private
+function isListed(m){ return vis(m)==="public"; }       // shown in browse & search
+function isAccessible(m){ return vis(m)!=="private"; }  // direct link / QR allowed
+function visLabel(v){ return v==="private"?"🔒 비공개":(v==="unlisted"?"🔗 링크만":"🌐 공개"); }
+function nextVis(v){ return v==="public"?"unlisted":(v==="unlisted"?"private":"public"); }
+function priceText(m){ return m.hidePrice ? "가격 문의" : won(m.price); }
+/* mutate a menu by store slug + menu id, then persist */
+function updateMenu(slug, id, fn){
+  var ss=stores();
+  for(var i=0;i<ss.length;i++){
+    if(ss[i].slug===slug){
+      for(var j=0;j<ss[i].menus.length;j++){
+        if(ss[i].menus[j].id===id){ fn(ss[i].menus[j]); }
+      }
+    }
+  }
+  saveStores(ss);
+}
+/* store-level open / pause (휴무) */
+function storeOpen(s){ return !(s&&s.paused); }
+function updateStore(slug, fn){
+  var ss=stores();
+  for(var i=0;i<ss.length;i++){ if(ss[i].slug===slug){ fn(ss[i]); } }
+  saveStores(ss);
+}
+function toast(msg){
+  var t = document.createElement("div");
+  t.className="toast"; t.textContent=msg; document.body.appendChild(t);
+  setTimeout(function(){ t.remove(); }, 1600);
+}
+function publicUrl(path){ return HOST + path; }
+
+/* live route bar */
+function setRoute(path){
+  var el = $("#urlText");
+  var clean = path.replace(/^#/,"");
+  if(clean==="/" || clean===""){ el.innerHTML = "yourapp.com<b>/</b>"; return; }
+  el.innerHTML = "yourapp.com<b>"+clean+"</b>";
+}
+
+/* ---------- current order option state ---------- */
+var orderState = { temp:null, size:null, qty:1 };
+
+/* ====================================================== ROUTER */
+function router(){
+  var h = location.hash || "#/";
+  setRoute(h);
+  var parts = h.replace(/^#\/?/,"").split("/").filter(Boolean);
+  var head = parts[0]||"";
+  // close any open sheet
+  var sb=$(".sheet-bg"); if(sb) sb.remove();
+
+  if(head==="" ) return renderHome();
+  if(head==="ai") return renderHome();
+  if(head==="shop") return renderShop();
+  if(head==="sell") return renderSell();
+  if(head==="p"||head==="buy") return renderProduct(parts[1], parts[2]);
+  if(head==="settings") return renderSettings();
+  if(head==="admin") return renderAdmin();
+  if(head==="collect") return renderCollect();
+  if(head==="cafe"||head==="store") return renderStore(parts[1]);
+  if(head==="order"||head==="m"||head==="menu") return renderOrder(parts[1], parts[2]);
+  renderHome();
+  setActiveTab(h);
+}
+function setActiveTab(h){
+  ["home","shop","sell","admin","collect","settings"].forEach(function(t){ var b=$("#tab-"+t); if(b) b.classList.remove("on"); });
+  if(h.indexOf("#/sell")===0) { var sl=$("#tab-sell"); if(sl) sl.classList.add("on"); }
+  else if(h.indexOf("#/shop")===0||h.indexOf("#/p/")===0||h.indexOf("#/buy/")===0) { var sb2=$("#tab-shop"); if(sb2) sb2.classList.add("on"); }
+  else if(h.indexOf("#/admin")===0) $("#tab-admin").classList.add("on");
+  else if(h.indexOf("#/collect")===0) $("#tab-collect").classList.add("on");
+  else if(h.indexOf("#/settings")===0) $("#tab-settings").classList.add("on");
+  else $("#tab-home").classList.add("on");
+}
+
+/* ====================================================== HOME */
+function renderHome(){
+  var ss = stores();
+  var cards = ss.map(function(s){
+    var closed = !storeOpen(s);
+    return '<div class="store'+(closed?' closed':'')+'" data-action="go-store" data-slug="'+s.slug+'">'+
+      '<div class="emoji">'+s.emoji+'</div>'+
+      '<div class="nm">'+s.name+(closed?' <span class="badge-rest">휴무</span>':'')+'</div>'+
+      '<div class="meta">'+s.area+' · 메뉴 '+s.menus.length+'개</div>'+
+      '<span class="tag">'+s.cat+'</span></div>';
+  }).join("");
+
+  var aiBadge = getKey() ? '<span class="ai-on">🔑 '+(getProvider()==="gemini"?"Gemini":"Claude")+' 연결됨</span>' : '<span class="ai-off" data-action="nav" data-to="#/settings">🔑 키 넣으면 더 정확</span>';
+  var html =
+    '<div class="hd"><div class="eyebrow">음식 · 쇼핑 → 결제 직전까지</div>'+
+      '<h1>말하면 AI가<br>결제 직전까지</h1>'+
+      '<p>음식이든 쇼핑이든, 누르거나 음성으로 말하면 AI가 실행 → 선택 → 장바구니 → 결제 직전까지 안내해요.</p></div>'+
+    '<div class="ai-input"><div class="ai-cap">✨ AI 주문·쇼핑 '+aiBadge+'</div>'+
+      '<textarea id="aiq" placeholder="예: 스타벅스 아아 톨 / 쿠팡 아이폰 17 Pro 최저가로 담아줘"></textarea>'+
+      '<div class="bar"><button class="mic" data-action="ai-voice" id="micBtn">🎙️</button>'+
+      '<button class="send" data-action="ai-run">AI로 진행 ✨</button></div></div>'+
+    '<div class="examples">'+
+      '<button class="ex" data-action="ai-fill" data-q="스타벅스 아이스 아메리카노 톨로 주문해줘">☕ 스벅 아아 톨</button>'+
+      '<button class="ex" data-action="ai-fill" data-q="교촌 허니콤보 한 마리 주문">🍗 교촌 허니콤보</button>'+
+      '<button class="ex" data-action="ai-fill" data-q="쿠팡에서 아이폰 17 Pro 256GB 최저가로 담아줘">📱 아이폰 17 Pro</button>'+
+    '</div>'+
+    '<div id="aiResult"></div>'+
+    '<div class="bigentry" data-action="nav" data-to="#/shop"><div class="be-e">🛍️</div>'+
+      '<div class="be-t"><div class="be-h">쇼핑하러 가기</div><div class="be-s">쿠팡·11번가·네이버쇼핑 최저가 자동 담기</div></div><div class="be-go">›</div></div>'+
+    '<div class="search"><span class="ic">🔎</span><input placeholder="가게·메뉴 검색 (예: 빅맥)" id="q"></div>'+
+    '<div class="sec-t">입점 가게</div>'+
+    '<div class="grid">'+cards+'</div>';
+  $("#view").innerHTML = html;
+  setActiveTab("#/");
+
+  $("#q").addEventListener("input", function(e){
+    var v = e.target.value.trim().toLowerCase();
+    var grid = $(".grid"); 
+    if(!v){ router(); return; }
+    var hits = [];
+    stores().forEach(function(s){
+      s.menus.forEach(function(m){
+        if(!isListed(m)) return; // 비공개·링크전용은 검색에서 제외
+        if(m.name.toLowerCase().indexOf(v)>=0 || s.name.toLowerCase().indexOf(v)>=0)
+          hits.push({s:s,m:m});
+      });
+    });
+    grid.style.gridTemplateColumns="1fr";
+    grid.innerHTML = hits.length? hits.map(function(h){
+      var closed = !storeOpen(h.s);
+      var off = closed || h.m.soldout;
+      var label = closed ? '<span class="badge-rest">휴무</span>' : (h.m.soldout?'<span class="badge-sold">판매중지</span>':'');
+      return '<div class="menu'+(off?' soldout':'')+'"'+(off?'':' data-action="go-order" data-store="'+h.s.name+'" data-menu="'+h.m.name+'"')+'>'+
+        '<div class="ph">'+(h.m.img?'<img src="'+h.m.img+'">':h.m.emoji)+'</div>'+
+        '<div class="info"><div class="nm">'+h.m.name+(label?' '+label:'')+'</div>'+
+        '<div class="ds">'+h.s.name+' · '+h.s.area+'</div>'+
+        '<div class="pr">'+priceText(h.m)+'</div></div><div class="go">'+(off?'·':'›')+'</div></div>';
+    }).join("") : '<div class="empty"><div class="ee">🍽️</div>검색 결과가 없어요</div>';
+  });
+}
+
+/* ====================================================== STORE */
+function renderStore(slug){
+  var s = findStore(slug);
+  if(!s){ $("#view").innerHTML='<div class="empty"><div class="ee">🤔</div>가게를 찾을 수 없어요</div>'; return; }
+  var closed = !storeOpen(s);
+  var listed = s.menus.filter(isListed);
+  var menus = listed.map(function(m){
+    var off = closed || m.soldout;
+    var label = closed ? '' : (m.soldout?' <span class="badge-sold">판매중지</span>':'');
+    return '<div class="menu'+(off?' soldout':'')+'"'+(off?'':' data-action="go-order" data-store="'+s.slug+'" data-menu="'+m.name+'"')+'>'+
+      '<div class="ph">'+(m.img?'<img src="'+m.img+'">':m.emoji)+'</div>'+
+      '<div class="info"><div class="nm">'+m.name+label+'</div>'+
+      '<div class="ds">'+(m.desc||'')+'</div>'+
+      '<div class="pr">'+priceText(m)+'</div></div>'+
+      '<div class="go"'+(off?' style="color:var(--sub)"':'')+'>'+(off?'·':'›')+'</div></div>';
+  }).join("");
+  if(!listed.length) menus = '<div class="empty"><div class="ee">🍽️</div>공개된 메뉴가 아직 없어요</div>';
+  $("#view").innerHTML =
+    '<div class="back" data-action="nav" data-to="#/">‹ 홈</div>'+
+    '<div class="shero'+(closed?' rest':'')+'"><div class="e">'+s.emoji+'</div><h2>'+s.name+(closed?' <span class="badge-rest">휴무</span>':'')+'</h2>'+
+      '<div class="sub">'+s.cat+' · '+s.area+'</div>'+
+      '<div class="chips"><span class="chip">'+(closed?'⛔ 영업 종료':'⏱ 예상 15분')+'</span><span class="chip">🔗 공개 메뉴 '+listed.length+'개</span></div></div>'+
+    (closed?'<div class="sold-banner">😴 현재 휴무 중입니다 — 지금은 주문할 수 없어요</div>':'')+
+    '<div class="sec-t">메뉴 — 각 항목이 고유 주문 링크</div>'+menus;
+}
+
+/* ====================================================== ORDER */
+function renderOrder(storeKey, menuKey){
+  var s = findStore(storeKey);
+  var m = findMenu(s, menuKey);
+  if(!s||!m){ $("#view").innerHTML='<div class="empty"><div class="ee">🔍</div>메뉴를 찾을 수 없어요<br><small>'+dec(storeKey||'')+' / '+dec(menuKey||'')+'</small></div>'; return; }
+
+  // private menus are not reachable even by direct link / QR
+  if(!isAccessible(m)){
+    $("#view").innerHTML =
+      '<div class="back" data-action="go-store" data-slug="'+s.slug+'">‹ '+s.name+'</div>'+
+      '<div class="empty"><div class="ee">🔒</div>비공개로 설정된 메뉴예요<br><small>사장님이 공개로 바꾸면 이 링크로 주문할 수 있어요</small></div>';
+    return;
+  }
+  // whole store paused (휴무)
+  if(!storeOpen(s)){
+    $("#view").innerHTML =
+      '<div class="back" data-action="go-store" data-slug="'+s.slug+'">‹ '+s.name+'</div>'+
+      '<div class="empty"><div class="ee">😴</div>'+s.name+'은(는) 현재 휴무 중이에요<br><small>영업이 시작되면 이 링크로 바로 주문할 수 있어요</small></div>';
+    return;
+  }
+
+  orderState = { temp:m.defTemp||null, size:m.defSize||(m.sizes?m.sizes[0]:null), qty:1 };
+  var url = publicUrl("/order/"+s.name+"/"+m.name);
+  var sold = m.soldout;
+
+  function optRow(title, list, kind){
+    if(!list||!list.length) return "";
+    var cur = kind==="temp"?orderState.temp:orderState.size;
+    var btns = list.map(function(o){
+      return '<button class="opt'+(o===cur?' on':'')+'" data-action="opt" data-kind="'+kind+'" data-val="'+o+'">'+o+'</button>';
+    }).join("");
+    return '<div class="optblock"><div class="ot">'+title+'</div><div class="opts">'+btns+'</div></div>';
+  }
+
+  var cta = sold
+    ? '<div class="cta-bar"><button class="cta" disabled style="background:#C9BFD8;box-shadow:none">현재 판매하지 않습니다</button></div>'
+    : '<div class="cta-bar"><button class="cta" data-action="add-cart" data-store="'+s.slug+'" data-menu="'+m.id+'">'+
+        '<span id="ctaTotal">'+won(m.price)+'</span> · 장바구니 담기</button></div>';
+
+  $("#view").innerHTML =
+    '<div class="back" data-action="go-store" data-slug="'+s.slug+'">‹ '+s.name+'</div>'+
+    '<div class="ph-big">'+(m.img?'<img src="'+m.img+'">':m.emoji)+'</div>'+
+    (sold?'<div class="sold-banner">⛔ 현재 판매중지된 메뉴입니다</div>':'')+
+    '<div class="o-store">'+s.emoji+' '+s.name+' · '+s.area+'</div>'+
+    '<div class="o-name">'+m.name+'</div>'+
+    '<div class="o-price" id="oPrice">'+won(m.price)+'</div>'+
+    (m.desc?'<p style="color:var(--sub);font-size:13px;margin:8px 0 0">'+m.desc+'</p>':'')+
+    optRow("온도", m.temps, "temp")+
+    optRow("사이즈", m.sizes, "size")+
+    '<div class="optblock"><div class="ot">수량</div><div class="qty">'+
+      '<button data-action="qty" data-d="-1">−</button><span id="qv">1</span><button data-action="qty" data-d="1">+</button></div></div>'+
+    '<div class="urlcard"><div class="t">🔗 이 메뉴의 공개 주문 링크 · '+visLabel(vis(m))+'</div>'+
+      '<div class="u">'+url+'</div>'+
+      '<div class="acts"><button class="btn-line" data-action="copy-url" data-url="'+url+'">링크 복사</button>'+
+      '<button class="btn-line" data-action="show-qr" data-url="'+url+'" data-name="'+m.name+'">QR 코드</button></div></div>'+
+    '<div id="qrbox"></div>'+
+    '<div style="height:30px"></div>'+
+    cta;
+
+  if(!sold) updateOrderPrice(m);
+}
+function updateOrderPrice(m){
+  var t = m.price * orderState.qty;
+  var op=$("#oPrice"), ct=$("#ctaTotal");
+  if(op) op.textContent=won(m.price);
+  if(ct) ct.textContent=won(t);
+  var qv=$("#qv"); if(qv) qv.textContent=orderState.qty;
+}
+
+/* ====================================================== SHOPPING */
+var shopState = { seller:0, opts:{}, qty:1 };
+
+function renderShop(){
+  ensureMyshop();
+  var ss=shops();
+  var blocks=ss.map(function(sh){
+    if(!sh.products.length) return "";
+    var items=sh.products.map(function(p){
+      var pr=productPrice(p);
+      var sub=(p.sellers&&p.sellers.length>1)?('최저 '+won(pr)+' · 판매자 '+p.sellers.length+'곳'):(won(pr)+(p.condition?' · '+p.condition:''));
+      return '<div class="menu shopitem" data-action="go-product" data-shop="'+sh.slug+'" data-prod="'+p.name+'">'+
+        '<div class="ph">'+productThumb(p)+'</div>'+
+        '<div class="info"><div class="nm">'+p.name+'</div><div class="ds">'+(p.desc||p.cat||'')+'</div>'+
+        '<div class="pr">'+sub+'</div></div><div class="go">›</div></div>';
+    }).join("");
+    return '<div class="sec-t">'+sh.emoji+' '+sh.name+(sh.mine?' <span class="badge-mine">내 상점</span>':'')+'</div>'+items;
+  }).join("");
+  $("#view").innerHTML =
+    '<div class="hd"><div class="eyebrow">쇼핑 · 최저가 자동 담기</div>'+
+      '<h1>사고 싶은 걸<br>결제 직전까지</h1>'+
+      '<p>상품마다 공개 URL을 가집니다. AI가 플랫폼 실행 → 검색 → 최저가 판매자 → 옵션 선택 → 장바구니까지 안내해요.</p></div>'+
+    '<div class="bigentry" data-action="nav" data-to="#/sell" style="background:linear-gradient(135deg,#6D28D9,#4C1D95)"><div class="be-e">🏷️</div>'+
+      '<div class="be-t"><div class="be-h">상품 등록하기</div><div class="be-s">사진 올리고 바로 판매 등록</div></div><div class="be-go">›</div></div>'+
+    '<div class="ai-input"><div class="ai-cap">🛍️ AI 쇼핑 '+(getKey()?'<span class="ai-on">🔑 '+(getProvider()==="gemini"?"Gemini":"Claude")+'</span>':'<span class="ai-off" data-action="nav" data-to="#/settings">🔑 키 넣으면 더 정확</span>')+'</div>'+
+      '<textarea id="aiq" placeholder="예: 쿠팡에서 아이폰 17 Pro 256GB 최저가로 담아줘"></textarea>'+
+      '<div class="bar"><button class="mic" data-action="ai-voice" id="micBtn">🎙️</button>'+
+      '<button class="send" data-action="ai-run">AI로 쇼핑 진행 🛒</button></div></div>'+
+    '<div class="examples">'+
+      '<button class="ex" data-action="ai-fill" data-q="쿠팡에서 아이폰 17 Pro 256GB 최저가로 담아줘">📱 아이폰 17 Pro</button>'+
+      '<button class="ex" data-action="ai-fill" data-q="11번가 갤럭시 S26 울트라 담아줘">📱 갤럭시 S26</button>'+
+      '<button class="ex" data-action="ai-fill" data-q="쿠팡 에어팟 프로 3 최저가">🎧 에어팟 프로 3</button>'+
+    '</div>'+
+    '<div id="aiResult"></div>'+
+    blocks;
+  setActiveTab("#/shop");
+}
+
+function renderProduct(shopKey, prodKey){
+  var sh=findShop(shopKey); var p=findProduct(sh, prodKey);
+  if(!sh||!p){ $("#view").innerHTML='<div class="empty"><div class="ee">🔍</div>상품을 찾을 수 없어요<br><small>'+dec(shopKey||'')+' / '+dec(prodKey||'')+'</small></div>'; return; }
+
+  var ci=cheapest(p);
+  shopState={ seller:ci, opts:{}, qty:1 };
+  Object.keys(p.options||{}).forEach(function(k){ shopState.opts[k]=p.options[k][0]; });
+
+  var sellerRows=p.sellers.map(function(se,i){
+    var low=(i===ci);
+    return '<button class="seller'+(i===shopState.seller?' on':'')+'" data-action="pick-seller" data-i="'+i+'">'+
+      '<div class="se-l"><div class="se-n">'+se.name+(low?' <span class="se-low">최저가</span>':'')+'</div></div>'+
+      '<div class="se-p">'+won(se.price)+'</div></button>';
+  }).join("");
+  var sellerBlock = (p.sellers&&p.sellers.length>1)
+    ? '<div class="optblock"><div class="ot">판매자 선택 · 최저가 자동</div><div class="sellers">'+sellerRows+'</div></div>'
+    : '';
+
+  var optBlocks=Object.keys(p.options||{}).map(function(k){
+    var chips=p.options[k].map(function(o){
+      return '<button class="opt'+(o===shopState.opts[k]?' on':'')+'" data-action="opt-shop" data-key="'+k+'" data-val="'+o+'">'+o+'</button>';
+    }).join("");
+    return '<div class="optblock"><div class="ot">'+k+'</div><div class="opts">'+chips+'</div></div>';
+  }).join("");
+
+  var hasImg=(p.images&&p.images.length);
+  var gallery = hasImg
+    ? '<div class="gallery">'+p.images.map(function(src,gi){ return '<div class="gslide"><img src="'+src+'">'+(p.images.length>1?'<span class="gnum">'+(gi+1)+'/'+p.images.length+'</span>':'')+'</div>'; }).join("")+'</div>'
+    : '<div class="ph-big">'+p.emoji+'</div>';
+
+  var descCard = (p.desc || p.cat || p.condition || p.delivery || (p.tags&&p.tags.length))
+    ? '<div class="optblock"><div class="ot">상품 소개</div><div class="desccard">'+
+        '<div class="dctext">'+
+          ((p.cat||p.condition||p.delivery)?'<div class="dmeta">'+[p.cat,p.condition,(p.delivery?'🚚 '+p.delivery:'')].filter(Boolean).join(' · ')+'</div>':'')+
+          (p.desc? p.desc.replace(/</g,"&lt;").replace(/\n/g,"<br>") : '<span style="color:var(--sub)">상세 설명이 없습니다</span>')+
+          ((p.tags&&p.tags.length)?'<div class="tagrow">'+p.tags.map(function(tg){return '<span class="tagchip">#'+tg+'</span>';}).join("")+'</div>':'')+
+        '</div></div></div>'
+    : '';
+
+  $("#view").innerHTML =
+    '<div class="back" data-action="nav" data-to="#/shop">‹ '+sh.name+'</div>'+
+    gallery+
+    '<div class="o-store">'+sh.emoji+' '+sh.name+(sh.mine?' · 내 상점':'')+'</div>'+
+    '<div class="o-name">'+p.name+'</div>'+
+    '<div class="o-price" id="pPrice">'+won(p.sellers[shopState.seller].price)+'</div>'+
+    sellerBlock+
+    optBlocks+
+    descCard+
+    '<div class="optblock"><div class="ot">수량</div><div class="qty">'+
+      '<button data-action="qty-shop" data-d="-1">−</button><span id="pqv">1</span><button data-action="qty-shop" data-d="1">+</button></div></div>'+
+    '<div style="height:30px"></div>'+
+    '<div class="cta-bar"><button class="cta" data-action="add-cart-shop" data-shop="'+sh.slug+'" data-prod="'+p.id+'">'+
+      '<span id="pctaTotal">'+won(p.sellers[shopState.seller].price)+'</span> · 장바구니 담기</button></div>';
+}
+function updateProductPrice(p){
+  var unit=p.sellers[shopState.seller].price;
+  var pp=$("#pPrice"); if(pp) pp.textContent=won(unit);
+  var ct=$("#pctaTotal"); if(ct) ct.textContent=won(unit*shopState.qty);
+  var qv=$("#pqv"); if(qv) qv.textContent=shopState.qty;
+}
+function shopOptSummary(){
+  var keys=Object.keys(shopState.opts);
+  return keys.map(function(k){ return shopState.opts[k]; }).join(" · ");
+}
+
+/* AI shopping stepper */
+function playShopSteps(sh, p, intent){
+  var box=$("#aiResult");
+  var ci=(typeof intent.seller==="number")?intent.seller:cheapest(p);
+  var se=p.sellers[ci];
+  var opts=intent.opts||{}; Object.keys(p.options||{}).forEach(function(k){ if(!opts[k]) opts[k]=p.options[k][0]; });
+  var optKeys=Object.keys(p.options||{});
+  var steps=[
+    {ic:"🧠", t:"요청 의도 분석", v:sh.name+" · "+p.name},
+    {ic:sh.emoji, t:sh.name+" 실행", v:"공개 URL "+HOST+"/p/"+sh.name+"/"+p.name+" 진입"},
+    {ic:"🔎", t:p.name+" 검색", v:"상품 페이지 도달"},
+    {ic:"💰", t:"가장 저렴한 판매자 선택", v:se.name+" "+won(se.price)+" (최저가)"}
+  ];
+  optKeys.forEach(function(k){
+    steps.push({ic:(k.indexOf("색")>=0?"🎨":(k.indexOf("저장")>=0||k.indexOf("용량")>=0?"💾":"⚙️")), t:k+" 선택", v:opts[k]});
+  });
+  steps.push({ic:"📦", t:"장바구니 담기", v:"수량 "+ (intent.qty||1) +"개 추가"});
+  steps.push({ic:"✅", t:"결제 직전 도달", v:"최종 확인만 남았습니다"});
+
+  box.innerHTML='<div class="steps">'+steps.map(function(st,i){
+    return '<div class="step" data-i="'+i+'"><div class="marker"><div class="bullet">'+st.ic+'</div><div class="line"></div></div>'+
+      '<div class="body"><div class="st">'+st.t+'</div><div class="sv">'+st.v+'</div></div></div>';
+  }).join("")+'</div><div id="aiFinal"></div>';
+
+  var nodes=box.querySelectorAll(".step"); var i=0;
+  (function next(){
+    if(i>=nodes.length){
+      var c=cart();
+      c.push({store:sh.name, name:p.name, price:se.price, qty:(intent.qty||1), sub:[se.name].concat(optKeys.map(function(k){return opts[k];})).join(" · ")});
+      saveCart(c);
+      $("#aiFinal").innerHTML=
+        '<div class="result-card"><div class="rh"><div class="re">'+p.emoji+'</div>'+
+        '<div><div class="rn">'+p.name+' 담기 완료</div><div class="rsub">'+sh.name+' · '+se.name+
+        (optKeys.length?' · '+optKeys.map(function(k){return opts[k];}).join(" · "):'')+'</div></div>'+
+        '<div style="margin-left:auto;font-weight:900;color:var(--order);font-size:17px">'+won(se.price)+'</div></div>'+
+        '<button class="cta" data-action="open-checkout">결제 직전 화면 열기 ›</button>'+
+        '<div class="handoff" style="margin-bottom:0;margin-top:10px"><span class="i">🤝</span><div><b>외부 앱 핸드오프</b><br>실제 쿠팡·11번가 앱은 장바구니 추가 API를 공개하지 않아, 배포 시엔 여기서 딥링크로 앱을 열고 마지막 담기·결제는 사용자가 확인합니다.</div></div></div>';
+      $("#aiFinal").scrollIntoView({behavior:"smooth",block:"center"});
+      return;
+    }
+    if(i>0){ nodes[i-1].classList.remove("act"); nodes[i-1].classList.add("done"); }
+    nodes[i].classList.add("act"); i++;
+    setTimeout(next, 560);
+  })();
+}
+
+/* local shopping intent parse (no key) */
+/* local shopping intent parse (no key) — keyword/partial matching */
+var STOPWORDS = ["저렴","저렴한","저렴한곳","제일","가장","최저가","최저","싼","싼곳","싸게","알려줘","알려","추천","추천해줘","보여줘","보여","찾아줘","찾아","검색","주문","주문해줘","담아줘","담아","사줘","구매","구입","해줘","쇼핑몰","쇼핑","에서","어디","어디서","하나","한개","좀","으로","그리고"];
+function tokenize(t){
+  return (t||"").toLowerCase().replace(/[^가-힣a-z0-9 ]/g," ").split(/\s+/).filter(function(w){
+    return w.length>=2 && STOPWORDS.indexOf(w)<0;
+  });
+}
+function scoreProduct(t, toks, sh, p){
+  var pn=p.name.toLowerCase(), pnns=pn.replace(/\s/g,"");
+  var score=0;
+  if(t.indexOf(pn)>=0 || t.indexOf(pnns)>=0) score+=6;
+  toks.forEach(function(w){ if(pn.indexOf(w)>=0 || pnns.indexOf(w)>=0) score+=2; });
+  pn.split(/\s+/).forEach(function(w){ if(w.length>=2 && t.indexOf(w)>=0) score+=2; });
+  (p.tags||[]).forEach(function(tag){
+    tag=(""+tag).toLowerCase(); if(!tag) return;
+    if(t.indexOf(tag)>=0) score+=4;
+    toks.forEach(function(w){ if(tag.indexOf(w)>=0 || w.indexOf(tag)>=0) score+=3; });
+  });
+  if(p.cat && toks.some(function(w){ return p.cat.toLowerCase().indexOf(w)>=0; })) score+=1;
+  if(t.indexOf(sh.name.toLowerCase())>=0) score+=1;
+  return score;
+}
+function shopCandidates(text){
+  var t=(text||"").toLowerCase(), toks=tokenize(t), arr=[];
+  shops().forEach(function(sh){
+    sh.products.forEach(function(p){
+      var s=scoreProduct(t, toks, sh, p);
+      if(s>=2) arr.push({shop:sh, product:p, score:s});
+    });
+  });
+  arr.sort(function(a,b){ return b.score-a.score; });
+  return arr.slice(0,6);
+}
+function shopIntentFor(p, text){
+  var t=(text||"").toLowerCase(), opts={};
+  Object.keys(p.options||{}).forEach(function(k){
+    p.options[k].forEach(function(o){ if(t.indexOf(o.toLowerCase())>=0) opts[k]=o; });
+  });
+  return {opts:opts, seller:cheapest(p), qty:1};
+}
+function parseShopIntent(text){
+  var c=shopCandidates(text);
+  if(!c.length) return null;
+  var best=c[0]; var hit={shop:best.shop, product:best.product};
+  var i=shopIntentFor(best.product, text);
+  hit.opts=i.opts; hit.seller=i.seller; hit.qty=i.qty;
+  return hit;
+}
+/* show candidate list when several products match */
+function renderCandidates(text, cands){
+  var box=$("#aiResult");
+  box.innerHTML='<div class="result-card"><div class="rh"><div class="re">🔎</div>'+
+    '<div><div class="rn">여러 상품이 검색됐어요</div><div class="rsub">원하는 상품을 선택하세요</div></div></div>'+
+    cands.map(function(c){
+      var p=c.product, sh=c.shop, pr=productPrice(p);
+      var sub=(p.sellers&&p.sellers.length>1)?('최저 '+won(pr)):(won(pr)+(p.condition?' · '+p.condition:''));
+      return '<div class="menu" data-action="pick-candidate" data-shop="'+sh.slug+'" data-prod="'+p.id+'">'+
+        '<div class="ph">'+productThumb(p)+'</div>'+
+        '<div class="info"><div class="nm">'+p.name+'</div><div class="ds">'+sh.emoji+' '+sh.name+(p.cat?' · '+p.cat:'')+'</div>'+
+        '<div class="pr">'+sub+'</div></div><div class="go">›</div></div>';
+    }).join("")+'</div>';
+}
+
+/* ====================================================== SELLER (상품 등록) */
+function renderSell(){
+  var ms=ensureMyshop();
+  var view=DB.get("fl_sell_tab")||"add";
+  $("#view").innerHTML =
+    '<div class="hd"><div class="eyebrow">셀러 · 상품 등록</div><h1>🏷️ 내 상점</h1>'+
+      '<p>네이버·중고나라처럼 사진을 올려 상품을 등록하면 쇼핑·AI 검색에 바로 노출됩니다.</p></div>'+
+    '<div class="tabseg"><button data-action="sell-tab" data-v="add" class="'+(view==="add"?"on":"")+'">상품 등록</button>'+
+      '<button data-action="sell-tab" data-v="list" class="'+(view==="list"?"on":"")+'">내 상품 ('+ms.products.length+')</button></div>'+
+    '<div id="sellBody"></div>';
+  if(view==="add") renderSellAdd(); else renderSellList(ms);
+  setActiveTab("#/sell");
+}
+function renderSellAdd(){
+  if(!window._sellImgs) window._sellImgs=[];
+  if(!window._sellCond) window._sellCond="새상품";
+  if(!window._sellDeliv) window._sellDeliv="택배(배송비 포함)";
+  $("#sellBody").innerHTML =
+    '<div class="field"><label>상품 이미지 · 최대 8장 (좌우로 밀기)</label>'+
+      '<div class="imgstrip" id="imgstrip"></div>'+
+      '<input type="file" id="f-imgs" accept="image/*" multiple style="display:none">'+
+      '<div class="hint">첫 번째 사진이 <b>대표 이미지</b>로 소개글 상단에 표시됩니다.</div></div>'+
+    '<div class="field"><label>상품명</label><input id="s-name" placeholder="예: 아이폰 15 Pro 256GB"></div>'+
+    '<div class="field"><label>가격 (원)</label><input id="s-price" type="number" inputmode="numeric" placeholder="850000"></div>'+
+    '<div class="field"><label>카테고리</label><div class="selwrap"><select id="s-cat">'+
+      ['카테고리 선택','디지털/가전','휴대폰/태블릿','컴퓨터/노트북','가구/인테리어','생활/주방','의류/잡화','뷰티/미용','도서/음반/문구','스포츠/레저','유아동','식품','반려동물','티켓/쿠폰','자동차/공구','기타']
+        .map(function(c,i){ return '<option value="'+(i===0?"":c)+'">'+c+'</option>'; }).join("")+
+      '</select><span class="selarrow">▾</span></div></div>'+
+    '<div class="field"><label>상품 상태</label><div class="opts" id="s-cond">'+
+      ['새상품','거의 새것','중고','고장/부품용'].map(function(c){ return '<button class="opt'+(c===window._sellCond?' on':'')+'" data-action="sell-cond" data-val="'+c+'">'+c+'</button>'; }).join("")+'</div></div>'+
+    '<div class="field"><label>거래방법</label><div class="opts" id="s-deliv">'+
+      ['택배(배송비 포함)','택배(배송비 별도)','직거래'].map(function(c){ return '<button class="opt'+(c===window._sellDeliv?' on':'')+'" data-action="sell-deliv" data-val="'+c+'">'+c+'</button>'; }).join("")+'</div></div>'+
+    '<div class="field"><label>검색 키워드 (태그)</label><input id="s-tags" placeholder="예: 리모컨, 리모콘, btv, 셋톱박스">'+
+      '<div class="hint">쉼표(,)로 구분해 별칭을 넣으면 그 단어로 검색해도 상품이 노출됩니다.</div>'+
+      '<button class="btn-line" data-action="suggest-tags" style="margin-top:8px;width:100%;padding:11px;border-radius:11px;font-weight:800;font-size:13px">✨ AI 태그 추천</button>'+
+      '<div id="tagSug"></div></div>'+
+    '<div class="field"><label>소개글</label><textarea id="s-desc" rows="4" placeholder="상품 설명을 입력하세요 (상태, 구입시기, 거래방법 등)"></textarea></div>'+
+    '<div id="descPrev"></div>'+
+    '<button class="cta grape" data-action="save-product">상품 등록</button>'+
+    '<div id="genResultS"></div>';
+  renderImgStrip();
+  renderDescPrev();
+  var d=$("#s-desc"); if(d) d.addEventListener("input", renderDescPrev);
+}
+function renderImgStrip(){
+  var strip=$("#imgstrip"); if(!strip) return;
+  var imgs=window._sellImgs||[];
+  var html=imgs.map(function(src,i){
+    return '<div class="ithumb"><img src="'+src+'">'+(i===0?'<span class="ibadge">대표</span>':'')+
+      '<button class="idel" data-action="sell-del-img" data-i="'+i+'">×</button></div>';
+  }).join("");
+  if(imgs.length<8) html+='<button class="iadd" data-action="sell-add-img"><span>＋</span><small>'+imgs.length+'/8</small></button>';
+  strip.innerHTML=html;
+}
+function renderDescPrev(){
+  var box=$("#descPrev"); if(!box) return;
+  var imgs=window._sellImgs||[];
+  var dv=$("#s-desc"); var desc=dv?dv.value:"";
+  if(!imgs.length && !desc){ box.innerHTML=""; return; }
+  box.innerHTML='<div class="field"><label>소개글 미리보기</label><div class="desccard">'+
+    (imgs.length?'<img src="'+imgs[0]+'">':'')+
+    '<div class="dctext">'+(desc? desc.replace(/</g,"&lt;").replace(/\n/g,"<br>") : '<span style="color:var(--sub)">소개글이 여기에 표시됩니다</span>')+'</div></div></div>';
+}
+function renderSellList(ms){
+  if(!ms.products.length){ $("#sellBody").innerHTML='<div class="empty"><div class="ee">📦</div>등록한 상품이 없어요</div>'; return; }
+  $("#sellBody").innerHTML = ms.products.map(function(p){
+    var meta=[p.cat,p.condition].filter(Boolean).join(" · ");
+    return '<div class="mini-menu">'+
+      '<div class="me">'+productThumb(p)+'</div>'+
+      '<div class="mi"><div class="mn">'+p.name+'</div>'+(meta?'<div class="mu">'+meta+'</div>':'')+'</div>'+
+      '<div class="mp">'+won(productPrice(p))+'</div>'+
+      '<button class="del" data-action="del-product" data-id="'+p.id+'">🗑</button></div>';
+  }).join("");
+}
+function afterSaveReset(){
+  window._sellImgs=[]; window._sellCond="새상품"; window._sellDeliv="택배(배송비 포함)";
+  ["s-name","s-price","s-cat","s-desc","s-tags"].forEach(function(id){ var el=$("#"+id); if(el) el.value=""; });
+  renderImgStrip(); renderDescPrev();
+}
+function saveProduct(){
+  ensureMyshop();
+  var name=($("#s-name").value||"").trim();
+  var price=parseInt($("#s-price").value,10);
+  if(!name){ toast("상품명을 입력하세요"); return; }
+  if(!price||price<0){ toast("가격을 입력하세요"); return; }
+  var desc=($("#s-desc").value||"").trim();
+  var cat=($("#s-cat").value||"").trim();
+  var tags=(($("#s-tags")&&$("#s-tags").value)||"").split(/[,\n]/).map(function(x){return x.trim();}).filter(Boolean);
+  var imgs=(window._sellImgs||[]).slice(0,8);
+  var prod={ id:"sp"+Date.now(), ts:Date.now(), name:name, price:price, emoji:"🏷️", desc:desc, cat:cat, tags:tags,
+    condition:window._sellCond||"중고", delivery:window._sellDeliv||"택배(배송비 포함)", images:imgs, sellers:[{name:"내 상점", price:price}] };
+  var ss=shops(); for(var i=0;i<ss.length;i++){ if(ss[i].slug==="myshop") ss[i].products.unshift(prod); } saveShops(ss);
+  $("#genResultS").innerHTML =
+    '<div class="okcard">✅ 상품이 등록되었습니다'+
+      '<button class="btn-line" data-action="sell-tab" data-v="list" style="margin-top:10px;width:100%;padding:11px;border-radius:11px;font-weight:800;font-size:13px">내 상품 보기</button></div>';
+  afterSaveReset();
+  toast("상품이 등록됐어요");
+  $("#genResultS").scrollIntoView({behavior:"smooth",block:"center"});
+}
+function delProduct(id){
+  var ss=shops();
+  for(var i=0;i<ss.length;i++){ if(ss[i].slug==="myshop"){ ss[i].products=ss[i].products.filter(function(p){return p.id!==id;}); } }
+  saveShops(ss); renderSell(); toast("상품을 삭제했어요");
+}
+
+/* ---------- AI tag suggestion ---------- */
+var TAG_SYN=[
+  ["리모콘","리모컨","리모트컨트롤","리모트"],
+  ["휴대폰","핸드폰","폰","스마트폰","휴대전화"],
+  ["노트북","랩탑","laptop","노트북컴퓨터"],
+  ["이어폰","이어버드","무선이어폰","블루투스이어폰"],
+  ["청소기","진공청소기","무선청소기","스틱청소기"],
+  ["텀블러","보온병","물통","보냉병"],
+  ["셋톱박스","셋톱","셋탑","set top","셋탑박스"],
+  ["티비","tv","텔레비전","티브이"],
+  ["충전기","charger","고속충전기","어댑터","충전케이블"],
+  ["마우스","mouse","무선마우스"],
+  ["키보드","keyboard","기계식키보드"],
+  ["에어팟","airpods","에어팟프로"],
+  ["아이폰","iphone","아이폰프로"],
+  ["갤럭시","galaxy","갤s"],
+  ["애플워치","apple watch","워치","스마트워치"],
+  ["스위치","switch","닌텐도스위치","닌텐도"],
+  ["모니터","monitor","디스플레이"],
+  ["선풍기","써큘레이터","circulator"]
+];
+function localTagSuggest(name, cat){
+  var n=(name||"").toLowerCase(), out=[];
+  TAG_SYN.forEach(function(grp){
+    if(grp.some(function(w){ return n.indexOf(w.toLowerCase())>=0; })){
+      grp.forEach(function(w){ if(n.indexOf(w.toLowerCase())<0) out.push(w); });
+    }
+  });
+  var ns=(name||"").replace(/\s/g,""); if(ns && ns.toLowerCase()!==n) out.push(ns);
+  (name||"").split(/\s+/).forEach(function(w){ if(w.length>=2) out.push(w); });
+  (cat||"").split(/[\/\s]+/).forEach(function(w){ if(w.length>=2) out.push(w); });
+  var seen={}, res=[];
+  out.forEach(function(w){ w=(""+w).trim(); var k=w.toLowerCase(); if(w && !seen[k] && k!==n){ seen[k]=1; res.push(w); } });
+  return res.slice(0,10);
+}
+function suggestTags(){
+  var name=($("#s-name")&&$("#s-name").value||"").trim();
+  var cat=($("#s-cat")&&$("#s-cat").value||"").trim();
+  if(!name){ toast("상품명을 먼저 입력하세요"); return; }
+  var box=$("#tagSug"); if(box) box.innerHTML='<div class="hint">추천 생성 중…</div>';
+  if(!getKey()){ return renderTagSug(localTagSuggest(name, cat)); }
+  var sys="너는 한국 쇼핑 검색 태그 생성기다. 상품명과 카테고리를 보고 사람들이 검색할 때 실제로 입력하는 별칭·동의어·자주 틀리는 표기·영문/한글 변형·줄임말을 만들어라. JSON 배열만 출력(설명 금지): [\"태그1\",\"태그2\"]. 최대 10개, 각 태그는 짧게. 상품명과 동일한 것은 제외.";
+  var usr="상품명: "+name+"\n카테고리: "+(cat||"(없음)");
+  aiComplete({system:sys, blocks:[{type:"text", text:usr}], max_tokens:300, temperature:0.4, json:true, prefill:"["})
+    .then(function(txt){
+      var arr=parseJSONLoose(txt);
+      if(!Array.isArray(arr)||!arr.length){ return renderTagSug(localTagSuggest(name, cat)); }
+      renderTagSug(arr.map(function(x){return (""+x).trim();}).filter(Boolean).slice(0,10));
+    })
+    .catch(function(){ renderTagSug(localTagSuggest(name, cat)); });
+}
+function renderTagSug(list){
+  window._tagSug=list||[];
+  var box=$("#tagSug"); if(!box) return;
+  var cur=(($("#s-tags")&&$("#s-tags").value)||"").toLowerCase();
+  var chips=(list||[]).filter(function(x){ return x && cur.indexOf((""+x).toLowerCase())<0; });
+  if(!chips.length){ box.innerHTML='<div class="hint">추가할 새 추천이 없어요</div>'; return; }
+  box.innerHTML='<div class="sugrow">'+chips.map(function(x){
+    return '<button class="sugchip" data-action="add-tag" data-tag="'+(""+x).replace(/"/g,'')+'">+ '+x+'</button>';
+  }).join("")+'</div>';
+}
+
+/* ====================================================== CHECKOUT SHEET */
+function openCheckout(){
+  var c = cart();
+  if(!c.length){ toast("장바구니가 비어 있어요"); return; }
+  var rows = c.map(function(it){
+    var opt = it.sub || [it.temp,it.size].filter(Boolean).join(" · ");
+    return '<div class="row"><div class="l">'+it.name+' ×'+it.qty+
+      (opt?'<small>'+it.store+' · '+opt+'</small>':'<small>'+it.store+'</small>')+'</div>'+
+      '<div class="r">'+won(it.price*it.qty)+'</div></div>';
+  }).join("");
+  var total = c.reduce(function(a,it){ return a+it.price*it.qty; },0);
+  var bg = document.createElement("div");
+  bg.className="sheet-bg"; bg.setAttribute("data-action","close-sheet");
+  bg.innerHTML =
+    '<div class="sheet" data-stop="1">'+
+      '<h3>결제 직전 화면</h3>'+
+      '<div class="sd">AI가 여기까지 자동으로 채워줍니다. 최종 결제만 직접 확인하세요.</div>'+
+      rows+
+      '<div class="total"><div class="l">합계</div><div class="r">'+won(total)+'</div></div>'+
+      '<div class="handoff"><span class="i">🤝</span><div><b>AI 핸드오프 지점</b><br>주문서 자동완성 완료 · 결제 버튼은 사용자가 직접 누릅니다 (안전장치)</div></div>'+
+      '<button class="cta" data-action="pay">결제하기 (데모)</button>'+
+      '<button class="cta grape" style="margin-top:8px" data-action="clear-cart">장바구니 비우기</button>'+
+    '</div>';
+  document.body.appendChild(bg);
+}
+
+/* ====================================================== SETTINGS (API key) */
+function renderSettings(){
+  var prov=getProvider();
+  var key=getKey();
+  var gmodel=DB.get("fl_gmodel")||"gemini-flash-latest";
+  var masked = key ? key.slice(0,7)+"••••••••"+key.slice(-4) : "";
+  var ph = prov==="gemini" ? "AIza..." : "sk-ant-...";
+  var keyHelp = prov==="gemini" ? "Google AI Studio에서 발급" : "console.anthropic.com에서 발급";
+  $("#view").innerHTML =
+    '<div class="hd"><div class="eyebrow">AI 연결 (선택)</div><h1>AI 제공자<br>연결</h1>'+
+      '<p><b>키 없어도 앱은 모두 작동</b>합니다(기본 검색·등록·주문). Claude나 Gemini 키를 넣으면 자연어 주문 이해와 메뉴판 사진 인식이 <b>더 정확</b>해져요. 키는 이 기기에만 저장됩니다.</p></div>'+
+    '<div class="tabseg"><button data-action="set-provider" data-v="claude" class="'+(prov==="claude"?"on":"")+'">Claude</button>'+
+      '<button data-action="set-provider" data-v="gemini" class="'+(prov==="gemini"?"on":"")+'">Gemini</button></div>'+
+    '<div class="field"><label>'+(prov==="gemini"?"Google AI (Gemini) API 키":"Anthropic (Claude) API 키")+'</label>'+
+      '<input id="apikey" type="password" placeholder="'+ph+'" value="'+key+'">'+
+      '<div class="hint">'+(key?('현재: '+masked):(keyHelp+' · 키가 없으면 기본 검색으로 동작'))+'</div></div>'+
+    (prov==="gemini"?'<div class="field"><label>Gemini 모델</label><input id="gmodel" value="'+gmodel+'">'+
+      '<div class="hint">기본 gemini-flash-latest(=3.5 Flash). 필요시 gemini-2.5-flash 등으로 변경. (2.0 계열은 종료됨)</div></div>':'')+
+    '<button class="cta grape" data-action="save-key">키 저장하고 연결</button>'+
+    (key?'<button class="cta" style="margin-top:8px;background:#fff;color:var(--order);border:1.5px solid var(--order);box-shadow:none" data-action="clear-key">키 삭제 (기본 검색으로)</button>':'')+
+    '<div class="tip" style="margin-top:18px">🔒 키는 <b>localStorage</b>에만 저장됩니다(제공자별로 따로 저장). 공용 기기에서는 사용 후 삭제하세요.<br><b>키가 없어도</b> 등록·쇼핑·주문·결제 직전까지 모든 흐름이 동작합니다(키워드 기반 검색).</div>'+
+    '<div class="tip" style="margin-top:10px">🧠 키를 넣으면 사용: <b>'+(prov==="gemini"?("Gemini "+gmodel):"claude-sonnet-4-6")+'</b> · 자연어 주문 이해와 메뉴판 사진 인식(Vision)이 더 정확해집니다.</div>';
+  setActiveTab("#/settings");
+}
+
+/* very light intent parsing (demo) */
+function parseIntent(text){
+  text = (text||"").toLowerCase();
+  var ss = stores();
+  var hit=null;
+  ss.forEach(function(s){
+    var keys=[s.name.toLowerCase(), s.slug.toLowerCase()];
+    if(s.name.indexOf("스타벅스")>=0) keys.push("스벅");
+    keys.forEach(function(k){ if(k && text.indexOf(k)>=0) hit=hit||{store:s}; });
+    s.menus.forEach(function(m){
+      var mn=m.name.toLowerCase();
+      if(text.indexOf(mn)>=0 || (mn.indexOf("아메리카노")>=0 && (text.indexOf("아아")>=0||text.indexOf("아메리카노")>=0))){
+        hit = {store:s, menu:m};
+      }
+    });
+  });
+  // detect size/temp
+  var size=null,temp=null;
+  if(text.indexOf("아이스")>=0||text.indexOf("아아")>=0||text.indexOf("ice")>=0) temp="ICED";
+  if(text.indexOf("핫")>=0||text.indexOf("따뜻")>=0||text.indexOf("hot")>=0) temp="HOT";
+  if(text.indexOf("톨")>=0||text.indexOf("tall")>=0) size="Tall";
+  if(text.indexOf("그란데")>=0||text.indexOf("grande")>=0) size="Grande";
+  if(text.indexOf("벤티")>=0||text.indexOf("venti")>=0) size="Venti";
+  if(text.indexOf("세트")>=0) size="세트";
+  if(hit && hit.menu){
+    hit.temp = temp || hit.menu.defTemp || null;
+    hit.size = size || hit.menu.defSize || (hit.menu.sizes?hit.menu.sizes[0]:null);
+  }
+  return hit;
+}
+
+/* ---------- multi-provider AI (Claude + Gemini) ---------- */
+function getProvider(){ return DB.get("fl_provider")||"claude"; }
+function getKey(){ return DB.get("fl_key_"+getProvider()) || (getProvider()==="claude"?(DB.get("fl_key")||""):"") ; }
+function aiModelLabel(){
+  return getProvider()==="gemini" ? ("Gemini · "+(DB.get("fl_gmodel")||"gemini-flash-latest")) : "Claude · claude-sonnet-4-6";
+}
+function aiComplete(opts){
+  opts = opts||{};
+  return (getProvider()==="gemini") ? callGemini(opts) : callClaudeN(opts);
+}
+/* blocks: [{type:'text',text} | {type:'image',mime,data}] */
+function callClaudeN(opts){
+  var content = (opts.blocks||[]).map(function(b){
+    if(b.type==="image") return {type:"image", source:{type:"base64", media_type:b.mime, data:b.data}};
+    return {type:"text", text:b.text};
+  });
+  var messages=[{role:"user", content:content}];
+  if(opts.prefill) messages.push({role:"assistant", content:opts.prefill});
+  var body={ model:"claude-sonnet-4-6", max_tokens:opts.max_tokens||1024, messages:messages };
+  if(opts.system) body.system=opts.system;
+  if(typeof opts.temperature==="number") body.temperature=opts.temperature;
+  return fetch("https://api.anthropic.com/v1/messages",{
+    method:"POST",
+    headers:{
+      "content-type":"application/json",
+      "x-api-key":getKey(),
+      "anthropic-version":"2023-06-01",
+      "anthropic-dangerous-direct-browser-access":"true"
+    },
+    body:JSON.stringify(body)
+  }).then(function(r){return r.json();}).then(function(d){
+    if(d.error) throw new Error((d.error&&d.error.message)||"Claude 오류");
+    var txt=(d.content||[]).filter(function(b){return b.type==="text";}).map(function(b){return b.text;}).join("\n");
+    return opts.prefill ? (opts.prefill+txt) : txt;
+  });
+}
+function callGemini(opts){
+  var parts=(opts.blocks||[]).map(function(b){
+    if(b.type==="image") return {inline_data:{mime_type:b.mime, data:b.data}};
+    return {text:b.text};
+  });
+  var gen={};
+  if(typeof opts.temperature==="number") gen.temperature=opts.temperature;
+  if(opts.max_tokens) gen.maxOutputTokens=opts.max_tokens;
+  if(opts.json) gen.responseMimeType="application/json";
+  var body={ contents:[{role:"user", parts:parts}], generationConfig:gen };
+  if(opts.system) body.systemInstruction={parts:[{text:opts.system}]};
+  var model=DB.get("fl_gmodel")||"gemini-flash-latest";
+  return fetch("https://generativelanguage.googleapis.com/v1beta/models/"+model+":generateContent",{
+    method:"POST",
+    headers:{ "content-type":"application/json", "x-goog-api-key":getKey() },
+    body:JSON.stringify(body)
+  }).then(function(r){return r.json();}).then(function(d){
+    if(d.error) throw new Error((d.error&&d.error.message)||"Gemini 오류");
+    var c=d.candidates&&d.candidates[0];
+    if(!c){ throw new Error("Gemini 응답이 비었습니다 (안전필터 또는 모델명 확인)"); }
+    return ((c.content&&c.content.parts)||[]).map(function(p){return p.text||"";}).join("\n");
+  });
+}
+function parseJSONLoose(txt){
+  if(!txt) return null;
+  var t = txt.replace(/```json/gi,"").replace(/```/g,"").trim();
+  var s=t.indexOf("{"); if(s<0) s=t.indexOf("[");
+  var e=Math.max(t.lastIndexOf("}"), t.lastIndexOf("]"));
+  if(s>=0&&e>=0) t=t.slice(s,e+1);
+  try{ return JSON.parse(t); }catch(err){ return null; }
+}
+/* downscale image to improve OCR reliability & cut tokens (long edge ~1568px) */
+function resizeImage(dataUrl, maxDim, cb){
+  try{
+    var img=new Image();
+    img.onload=function(){
+      var w=img.width||1, h=img.height||1, scale=Math.min(1, maxDim/Math.max(w,h));
+      var cw=Math.max(1,Math.round(w*scale)), ch=Math.max(1,Math.round(h*scale));
+      var cv=document.createElement("canvas"); cv.width=cw; cv.height=ch;
+      var ctx=cv.getContext("2d");
+      ctx.fillStyle="#fff"; ctx.fillRect(0,0,cw,ch);
+      ctx.drawImage(img,0,0,cw,ch);
+      try{ cb(cv.toDataURL("image/jpeg",0.92), cw, ch); }
+      catch(e){ cb(dataUrl); }
+    };
+    img.onerror=function(){ cb(dataUrl); };
+    img.src=dataUrl;
+  }catch(e){ cb(dataUrl); }
+}
+/* coerce a Korean menu price string to integer won */
+function normPrice(v){
+  if(typeof v==="number") return Math.round(v);
+  var s=(""+(v||"")).trim();
+  if(!s) return 0;
+  // "1만2천", "1만2천5백"
+  var man=s.match(/(\d+)\s*만/), cheon=s.match(/(\d+)\s*천/), baek=s.match(/(\d+)\s*백/);
+  if(man||cheon||baek){
+    return (man?parseInt(man[1],10)*10000:0)+(cheon?parseInt(cheon[1],10)*1000:0)+(baek?parseInt(baek[1],10)*100:0);
+  }
+  // "4.5" or "4,5" abbreviation → 4500
+  var ab=s.match(/^(\d{1,2})[.,](\d)\s*$/);
+  if(ab) return parseInt(ab[1],10)*1000 + parseInt(ab[2],10)*100;
+  var n=parseInt(s.replace(/[^0-9]/g,""),10)||0;
+  // bare small number likely in 천원 units (e.g. "12" → 12000)
+  if(n>0 && n<100 && !/[,]/.test(s)) return n*1000;
+  return n;
+}
+function aiLoading(msg){
+  return '<div class="result-card"><div class="rh"><div class="re">🤖</div><div><div class="rn">'+msg+'</div>'+
+    '<div class="rsub">'+aiModelLabel()+'</div></div></div>'+
+    '<div class="ai-spin"><span></span><span></span><span></span></div></div>';
+}
+function aiFail(box, msg){
+  box.innerHTML='<div class="result-card"><div class="rh"><div class="re">🤔</div>'+
+    '<div><div class="rn">'+(msg||"잘 못 알아들었어요")+'</div><div class="rsub">가게와 메뉴를 함께 말해주세요</div></div></div>'+
+    '<p style="color:var(--sub);font-size:13px;margin:0">예) "교촌 허니콤보 주문해줘", "아이폰 17 Pro 최저가", "리모콘 싸게"</p></div>';
+}
+
+/* play the agent stepper for a resolved intent */
+function playOrderSteps(s, m, intent){
+  var box=$("#aiResult");
+  if(!storeOpen(s)){
+    box.innerHTML='<div class="result-card"><div class="rh"><div class="re">😴</div>'+
+      '<div><div class="rn">'+s.name+' 휴무 중</div><div class="rsub">지금은 주문을 받지 않아요</div></div></div>'+
+      '<p style="color:var(--sub);font-size:13px;margin:0">다른 가게로 주문해보세요.</p></div>';
+    return;
+  }
+  if(!isAccessible(m)){ aiFail(box, m.name+"은(는) 비공개로 설정된 메뉴예요"); return; }
+  if(m.soldout){
+    box.innerHTML='<div class="result-card"><div class="rh"><div class="re">⛔</div>'+
+      '<div><div class="rn">'+m.name+' · 판매중지</div><div class="rsub">'+s.name+'에서 지금은 주문할 수 없어요</div></div></div>'+
+      '<p style="color:var(--sub);font-size:13px;margin:0">다른 메뉴로 다시 말씀해 주세요.</p></div>';
+    return;
+  }
+  var steps = [
+    {ic:"🧠", t:"주문 의도 분석", v:s.name+" · "+m.name+(intent.temp?" · "+intent.temp:"")+(intent.size?" · "+intent.size:"")},
+    {ic:"📲", t:s.name+" 화면 실행", v:"공개 URL "+HOST+"/order/"+s.name+"/"+m.name+" 진입"},
+    {ic:"📍", t:"가장 가까운 매장 선택", v:s.area+" (자동 선택됨)"},
+    {ic:m.emoji, t:"메뉴 자동 선택", v:m.name+" "+won(m.price)},
+    {ic:"⚙️", t:"옵션 자동 설정", v:[intent.temp,intent.size].filter(Boolean).join(" · ")||"기본값 적용"},
+    {ic:"🛒", t:"장바구니 담기", v:"수량 1개 추가 완료"},
+    {ic:"✅", t:"결제 직전 도달", v:"최종 확인만 남았습니다"}
+  ];
+  box.innerHTML='<div class="steps" id="stepWrap">'+steps.map(function(st,i){
+    return '<div class="step" data-i="'+i+'"><div class="marker"><div class="bullet">'+st.ic+'</div><div class="line"></div></div>'+
+      '<div class="body"><div class="st">'+st.t+'</div><div class="sv">'+st.v+'</div></div></div>';
+  }).join("")+'</div><div id="aiFinal"></div>';
+
+  var nodes = box.querySelectorAll(".step");
+  var i=0;
+  (function next(){
+    if(i>=nodes.length){
+      var c=cart();
+      c.push({store:s.name, slug:s.slug, name:m.name, price:m.price, qty:1, temp:intent.temp, size:intent.size});
+      saveCart(c);
+      $("#aiFinal").innerHTML =
+        '<div class="result-card"><div class="rh"><div class="re">'+m.emoji+'</div>'+
+        '<div><div class="rn">'+m.name+' 준비 완료</div><div class="rsub">'+s.name+' · '+s.area+
+        ([intent.temp,intent.size].filter(Boolean).length?' · '+[intent.temp,intent.size].filter(Boolean).join(" · "):'')+'</div></div>'+
+        '<div style="margin-left:auto;font-weight:900;color:var(--order);font-size:17px">'+won(m.price)+'</div></div>'+
+        '<button class="cta" data-action="open-checkout">결제 직전 화면 열기 ›</button></div>';
+      $("#aiFinal").scrollIntoView({behavior:"smooth",block:"center"});
+      return;
+    }
+    if(i>0){ nodes[i-1].classList.remove("act"); nodes[i-1].classList.add("done"); }
+    nodes[i].classList.add("act");
+    i++;
+    setTimeout(next, 620);
+  })();
+}
+
+function runAI(text){
+  var box=$("#aiResult");
+  text=(text||"").trim();
+  if(!text){ toast("주문 내용을 입력하세요"); return; }
+  window._lastAItext=text;
+
+  // shopping: rank candidates (tag-aware). Show chooser when several are close.
+  var cands=shopCandidates(text);
+  if(cands.length>=2 && (cands[0].score - cands[1].score)<=3){
+    return renderCandidates(text, cands);
+  }
+  if(cands.length>=1){
+    var c0=cands[0];
+    return playShopSteps(c0.shop, c0.product, shopIntentFor(c0.product, text));
+  }
+
+  // food: local match
+  var food=parseIntent(text);
+  if(food && food.menu){ return playOrderSteps(food.store, food.menu, food); }
+
+  // nothing matched locally
+  if(!getKey()){ return aiFail(box, "음식·상품을 찾지 못했어요"); }
+
+  // real AI intent resolution (handles fuzzy phrasing / unseen items)
+  box.innerHTML = aiLoading("AI가 요청을 분석 중…");
+  var foodCat = stores().map(function(s){
+    return { slug:s.slug, name:s.name, menus:s.menus.map(function(m){
+      return { id:m.id, name:m.name, price:m.price, sizes:m.sizes||[], temps:m.temps||[] };
+    })};
+  });
+  var shopCat = shops().map(function(sh){
+    return { slug:sh.slug, name:sh.name, products:sh.products.map(function(p){
+      return { id:p.id, name:p.name, tags:p.tags||[], options:p.options||{}, sellers:p.sellers.map(function(x){return x.name;}) };
+    })};
+  });
+  var sys = "너는 한국어 주문/쇼핑 의도 분석기다. 사용자 요청이 음식 주문인지 쇼핑인지 판단하고, 카탈로그에서 항목 하나를 고른다. "+
+    "JSON 하나만 출력(설명 금지): {\"type\":\"food\"|\"shop\",\"slug\":\"\",\"itemId\":\"\",\"itemName\":\"\",\"temp\":null,\"size\":null,\"options\":{},\"qty\":1}. "+
+    "food면 slug=가게, itemId=메뉴id, temp/size는 해당 메뉴 옵션 중에서. "+
+    "shop이면 slug=쇼핑몰, itemId=상품id, options는 상품 options의 각 키에 대해 사용자가 말한 값(없으면 생략). "+
+    "각 상품의 tags는 검색 별칭이다 — 사용자가 tags에 있는 단어로 말하면 그 상품으로 매칭하라. "+
+    "카탈로그에 없으면 slug를 \"\"로.";
+  var usr = "[음식 카탈로그]\n"+JSON.stringify(foodCat)+"\n\n[쇼핑 카탈로그]\n"+JSON.stringify(shopCat)+"\n\n사용자 요청: \""+text+"\"";
+
+  aiComplete({system:sys, blocks:[{type:"text", text:usr}], max_tokens:500, temperature:0, json:true, prefill:"{"})
+    .then(function(txt){
+      var j=parseJSONLoose(txt)||{};
+      if(j.type==="shop"){
+        var sh=j.slug?findShop(j.slug):null;
+        var p=null;
+        if(sh&&j.itemId){ for(var k=0;k<sh.products.length;k++){ if(sh.products[k].id===j.itemId) p=sh.products[k]; } }
+        if(sh&&!p&&j.itemName) p=findProduct(sh, j.itemName);
+        if(!sh||!p){ return aiFail(box, "AI가 상품을 특정하지 못했어요"); }
+        return playShopSteps(sh, p, {opts:j.options||{}, qty:j.qty||1, seller:cheapest(p)});
+      }
+      // default: food
+      var s=j.slug?findStore(j.slug):null;
+      var m=null;
+      if(s&&j.itemId){ for(var i=0;i<s.menus.length;i++){ if(s.menus[i].id===j.itemId) m=s.menus[i]; } }
+      if(s&&!m&&j.itemName) m=findMenu(s, j.itemName);
+      if(!s||!m){ return aiFail(box, "AI가 항목을 특정하지 못했어요"); }
+      playOrderSteps(s, m, {store:s, menu:m, temp:(j.temp||m.defTemp||null), size:(j.size||m.defSize||(m.sizes?m.sizes[0]:null))});
+    })
+    .catch(function(err){
+      var shopL2=parseShopIntent(text);
+      if(shopL2){ toast("AI 호출 실패 — 로컬 분석으로 진행"); return playShopSteps(shopL2.shop, shopL2.product, shopL2); }
+      var local=parseIntent(text);
+      if(local&&local.menu){ toast("AI 호출 실패 — 로컬 분석으로 진행"); return playOrderSteps(local.store, local.menu, local); }
+      aiFail(box, "AI 호출 실패: "+err.message);
+    });
+}
+
+/* ====================================================== ADMIN */
+/* ---------- 내 상점(최대 5개) ---------- */
+function ownedSlugs(){ try{ var a=JSON.parse(DB.get("fl_owned")||"[]"); return Array.isArray(a)?a:[]; }catch(e){ return []; } }
+function saveOwned(a){ DB.set("fl_owned", JSON.stringify(a)); }
+function adminStoreSwitcher(active){
+  var owned=ownedSlugs().map(findStore).filter(Boolean);
+  if(!owned.length) return "";   // 등록한 상점이 없으면 숨김 (데모 로그인만 한 경우)
+  var chips=owned.map(function(st){
+    var on=st.slug===active;
+    return '<button data-action="switch-store" data-slug="'+st.slug+'" style="flex:0 0 auto;padding:8px 12px;border-radius:12px;border:1.5px solid '+(on?"var(--grape)":"var(--line)")+';background:'+(on?"var(--grape-soft)":"#fff")+';color:'+(on?"var(--grape)":"var(--sub)")+';font-weight:800;font-size:13px;white-space:nowrap;cursor:pointer">'+st.emoji+" "+st.name+'</button>';
+  }).join("");
+  var addChip = owned.length<5 ? '<button data-action="new-store" style="flex:0 0 auto;padding:8px 12px;border-radius:12px;border:1.5px dashed var(--grape);background:#fff;color:var(--grape);font-weight:800;font-size:13px;white-space:nowrap;cursor:pointer">＋ 상점</button>' : "";
+  return '<div style="margin-bottom:12px"><div style="font-size:12px;font-weight:800;color:var(--sub);margin-bottom:6px">내 상점 ('+owned.length+'/5)</div>'+
+    '<div style="display:flex;gap:7px;overflow-x:auto;padding-bottom:2px">'+chips+addChip+'</div></div>';
+}
+function renderNewStore(){
+  var n=ownedSlugs().length;
+  var full=n>=5;
+  var cats=["카페","치킨","분식","한식","중식","일식","양식","피자","버거·패스트푸드","족발·보쌈","야식","디저트·베이커리","편의점·마트","꽃·선물","뷰티·미용","기타"];
+  var catOpts='<option value="">업종 선택</option>'+cats.map(function(c){return '<option value="'+c+'">'+c+'</option>';}).join("");
+  var owned=ownedSlugs().map(findStore).filter(Boolean);
+  var ownedList = owned.length ? (
+    '<div class="field"><label>내 상점 ('+owned.length+'/5) · 목록에서 삭제</label>'+
+      owned.map(function(st){
+        return '<div style="display:flex;align-items:center;gap:8px;padding:9px 0;border-bottom:1px solid var(--line)">'+
+          '<div style="flex:1;min-width:0;font-weight:700;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+st.emoji+' '+st.name+'</div>'+
+          '<button data-action="del-store" data-slug="'+st.slug+'" style="flex:0 0 auto;padding:7px 13px;border-radius:9px;border:1px solid #eecdd0;background:#fff;color:#d3374b;font-size:12.5px;font-weight:800;cursor:pointer">삭제</button>'+
+        '</div>';
+      }).join("")+'</div>'
+  ) : "";
+  var selCss='width:100%;padding:14px;border:1.5px solid var(--line);border-radius:12px;font-size:15px;background:#fff;font-family:inherit;color:#222;-webkit-appearance:menulist;appearance:menulist';
+  $("#view").innerHTML =
+    '<div class="hd"><div class="eyebrow">상점 등록</div><h1>🏪 새 상점 만들기</h1>'+
+      '<p>내 상점을 최대 5개까지 등록할 수 있어요. (현재 '+n+'/5)</p></div>'+
+    ownedList+
+    (full?'<div class="tip" style="margin-bottom:12px">⚠️ 상점은 최대 5개까지예요. 위 목록에서 하나를 삭제하면 더 만들 수 있어요.</div>':"")+
+    '<div class="field"><label>상점 이름</label><input id="ns-name" placeholder="예: 포도카페 강남점"></div>'+
+    '<div class="field"><label>업종</label><select id="ns-cat" style="'+selCss+'">'+catOpts+'</select></div>'+
+    '<div class="field"><label>지역 / 주소</label>'+
+      '<div style="display:flex;gap:7px">'+
+        '<input id="ns-area" placeholder="주소 입력 (예: 서울 강남구 …)" style="flex:1">'+
+        '<button data-action="geo-fill" style="flex:0 0 auto;padding:0 14px;border-radius:12px;border:1.5px solid var(--grape);background:var(--grape-soft);color:var(--grape);font-weight:800;white-space:nowrap;cursor:pointer">📍 현위치</button>'+
+      '</div>'+
+      '<div class="hint">📍 현위치를 누르면 지금 있는 곳 주소가 자동 입력돼요. 직접 입력도 됩니다.</div></div>'+
+    '<div class="field"><label>대표 이모지</label><input id="ns-emoji" maxlength="2" value="🏪"></div>'+
+    '<div style="display:flex;gap:9px;margin-top:4px">'+
+      '<button data-action="nav" data-to="#/admin" style="flex:0 0 auto;background:#fff;color:var(--sub);border:1.5px solid var(--line);border-radius:16px;padding:16px 18px;font-weight:800;cursor:pointer">취소</button>'+
+      '<button class="cta grape" data-action="create-store" style="flex:1;margin:0'+(full?';opacity:.5':'')+'">상점 만들기</button>'+
+    '</div>';
+  setActiveTab("#/admin");
+}
+function renderAdmin(){
+  var logged = DB.get("fl_owner");
+  if(!logged){ return renderAdminLogin(); }
+  var s = findStore(logged);
+  if(!s){ DB.set("fl_owner",""); return renderAdminLogin(); }
+
+  var view = DB.get("fl_admin_tab")||"add";
+  var closed = !storeOpen(s);
+  var pauseBar =
+    '<div class="pausebar'+(closed?' off':'')+'">'+
+      '<div class="pb-info"><div class="pb-t">'+(closed?'😴 휴무 중':'🟢 영업 중')+'</div>'+
+        '<div class="pb-s">'+(closed?'손님 화면에서 주문이 모두 막혀 있어요':'손님이 메뉴를 주문할 수 있어요')+'</div></div>'+
+      '<button class="pb-btn" data-action="toggle-pause" data-slug="'+s.slug+'">'+(closed?'영업 시작':'휴무로 전환')+'</button>'+
+    '</div>';
+  $("#view").innerHTML =
+    '<div class="hd"><div class="eyebrow">사장님 관리자</div><h1>'+s.emoji+' '+s.name+'</h1>'+
+      '<p>'+s.area+' · 메뉴를 등록하면 공개 URL과 QR이 자동 생성됩니다.</p></div>'+
+    pauseBar+
+    adminStoreSwitcher(s.slug)+
+    '<div class="tabseg"><button data-action="admin-tab" data-v="add" class="'+(view==="add"?"on":"")+'">메뉴 등록</button>'+
+      '<button data-action="admin-tab" data-v="list" class="'+(view==="list"?"on":"")+'">내 메뉴 ('+s.menus.length+')</button></div>'+
+    '<div id="adminBody"></div>';
+  if(view==="add") renderAdminAdd(s); else renderAdminList(s);
+  setActiveTab("#/admin");
+}
+function renderAdminLogin(){
+  $("#view").innerHTML =
+    '<div class="hd"><div class="eyebrow">사장님 전용</div><h1>가게 등록 &<br>메뉴 관리</h1>'+
+      '<p>데모에서는 기존 가게로 바로 로그인할 수 있어요. 실제 서비스에선 이메일·사업자번호로 가입합니다.</p></div>'+
+    '<div class="field"><label>내 가게 선택 (데모 로그인)</label></div>'+
+    stores().map(function(s){
+      return '<div class="mini-menu" data-action="admin-login" data-slug="'+s.slug+'">'+
+        '<div class="me">'+s.emoji+'</div><div class="mi"><div class="mn">'+s.name+'</div>'+
+        '<div class="mu">'+HOST+'/cafe/'+s.slug+'</div></div><div class="qr">→</div></div>';
+    }).join("")+
+    '<div class="tip">🆕 <b>신규 가입</b>도 같은 흐름입니다 — 가게 이름·주소 입력 → 슬러그(<code>/cafe/슬러그</code>) 자동 발급 → 메뉴 등록.</div>';
+  setActiveTab("#/admin");
+}
+function renderAdminAdd(s){
+  $("#adminBody").innerHTML =
+    '<div class="field"><label>메뉴 이름</label><input id="f-name" placeholder="예: 바닐라 라떼"></div>'+
+    '<div class="field"><label>가격 (원)</label><input id="f-price" type="number" inputmode="numeric" placeholder="5500"></div>'+
+    '<div class="field"><label>설명 (선택)</label><input id="f-desc" placeholder="한 줄 소개"></div>'+
+    '<div class="field"><label>사진</label><div class="uploader" data-action="pick-photo" id="uploader">'+
+      '<div id="upInner">📷 사진 올리기 / 이모지로 대체</div></div>'+
+      '<input type="file" id="f-file" accept="image/*" style="display:none">'+
+      '<div class="hint">사진 없으면 이모지로 표시됩니다.</div></div>'+
+    '<div class="field"><label>대표 이모지</label><input id="f-emoji" maxlength="2" placeholder="☕" value="🍽️"></div>'+
+    '<div style="display:flex;gap:9px;align-items:stretch;margin-top:4px">'+
+      '<button data-action="new-store" style="flex:0 0 auto;background:#fff;color:var(--grape);font-weight:900;font-size:14px;padding:16px 15px;border-radius:16px;border:1.5px solid var(--grape);white-space:nowrap;cursor:pointer">🏪 상점 등록</button>'+
+      '<button class="cta grape" data-action="save-menu" data-slug="'+s.slug+'" style="flex:1;margin:0">메뉴 등록</button>'+
+    '</div>'+
+    '<div id="genResult"></div>';
+}
+function renderAdminList(s){
+  var backBtn='<button data-action="admin-tab" data-v="add" style="background:none;border:none;color:var(--grape);font-weight:800;font-size:14px;padding:2px 0 12px;cursor:pointer">← 상점·메뉴 등록으로</button>';
+  if(!s.menus.length){ $("#adminBody").innerHTML=backBtn+'<div class="empty"><div class="ee">📭</div>등록된 메뉴가 없어요</div>'; return; }
+  $("#adminBody").innerHTML = backBtn+
+    '<div class="tip" style="margin-bottom:12px">🎛 메뉴마다 <b>공개범위</b>·<b>가격 숨김</b>·<b>품절</b>을 직접 끄고 켤 수 있어요. 공개 페이지·주문·AI에 바로 반영됩니다.</div>'+
+    s.menus.map(function(m){
+    var url = HOST+"/order/"+s.name+"/"+m.name;
+    var v=vis(m);
+    return '<div class="mcard">'+
+      '<div class="mini-menu" style="box-shadow:none;border:none;margin:0;padding:0">'+
+        '<div class="me">'+(m.img?'<img src="'+m.img+'">':m.emoji)+'</div>'+
+        '<div class="mi"><div class="mn">'+m.name+'</div><div class="mu">'+url+'</div></div>'+
+        '<div class="mp">'+priceText(m)+'</div>'+
+        '<button class="qr" data-action="show-qr" data-url="'+url+'" data-name="'+m.name+'">▦</button>'+
+        '<button class="del" data-action="del-menu" data-slug="'+s.slug+'" data-id="'+m.id+'">🗑</button>'+
+      '</div>'+
+      '<div class="ctrls">'+
+        '<button class="ctrl vis-'+v+'" data-action="vis-cycle" data-slug="'+s.slug+'" data-id="'+m.id+'">'+visLabel(v)+'</button>'+
+        '<button class="ctrl'+(m.hidePrice?" on":"")+'" data-action="toggle-price" data-slug="'+s.slug+'" data-id="'+m.id+'">'+(m.hidePrice?"💰 가격 숨김 ON":"💰 가격 숨김")+'</button>'+
+        '<button class="ctrl'+(m.soldout?" sold":"")+'" data-action="toggle-sold" data-slug="'+s.slug+'" data-id="'+m.id+'">'+(m.soldout?"⛔ 품절 ON":"⛔ 품절")+'</button>'+
+      '</div>'+
+    '</div>';
+  }).join("")+'<div id="qrbox"></div>';
+}
+
+/* ====================================================== COLLECT (AI auto draft) */
+function renderCollect(){
+  $("#view").innerHTML =
+    '<div class="hd"><div class="eyebrow">사장 등록 없이도</div><h1>AI가 메뉴를<br>대신 수집</h1>'+
+      '<p>네이버·홈페이지·메뉴판 사진에서 메뉴 초안을 만들고, 사장님은 가격만 확인하면 됩니다.</p></div>'+
+    '<div class="src"><div class="si">🟢</div><input id="src-naver" placeholder="네이버 플레이스 URL 붙여넣기"></div>'+
+    '<div class="src"><div class="si">🌐</div><input id="src-home" placeholder="식당 홈페이지 URL (선택)"></div>'+
+    '<div class="src"><div class="si">🖼️</div><input id="src-ocr" placeholder="메뉴판 사진 — OCR (탭하여 업로드)" readonly data-action="pick-ocr"></div>'+
+    '<button class="cta grape" data-action="collect-run">AI로 메뉴 초안 만들기 🤖</button>'+
+    '<div id="collectResult"></div>'+
+    '<div class="tip">📷 <b>메뉴판 사진</b>을 올리고 키를 연결하면 AI Vision(Claude/Gemini)이 실제로 메뉴·가격을 읽어옵니다.<br>🟢 네이버/홈페이지 URL 파싱은 브라우저 보안(CORS)상 <b>프록시(Apps Script 등) 서버</b>가 필요해요 — 사진 OCR을 먼저 쓰는 걸 권장합니다.<br>⚠️ 키가 없으면 샘플 초안으로 흐름을 체험합니다.</div>';
+  setActiveTab("#/collect");
+}
+function runCollect(){
+  var box=$("#collectResult");
+  var hasImg = !!window._ocrPhoto;
+
+  // real Claude Vision path (menu photo)
+  if(getKey() && hasImg){
+    box.innerHTML = aiLoading("메뉴판 사진을 AI Vision으로 인식 중…");
+    var media = window._ocrPhoto;
+    var mm = media.match(/^data:(.*?);base64,(.*)$/);
+    if(!mm){ return collectDemo(box, "이미지 형식 오류 — 샘플로 진행"); }
+    var sys =
+      "너는 한국 식당 메뉴판 OCR·구조화 전문가다. 사진에서 '판매 메뉴 항목'만 정확히 추출한다.\n"+
+      "[제외] 가게명·주소·전화번호·영업시간·SNS·배달안내·이벤트 문구·로고·'BEST/추천' 같은 라벨은 메뉴가 아니므로 제외.\n"+
+      "[이름/설명] name에는 메뉴 이름만, 부가 설명은 desc에(없으면 \"\").\n"+
+      "[가격] 원 단위 정수로 정규화: '4,500원'→4500, '4.5'→4500, '12'(천원 표기 추정)→12000, '1만2천'→12000. 가격이 안 보이면 0.\n"+
+      "[사이즈] 한 메뉴에 가격이 여러 개(예: R/L, 小/中/大)면 가장 낮은 기본가를 price로, 나머지는 desc에 'L 5500' 식으로 기록.\n"+
+      "[카테고리] cat은 사진의 섹션 제목을 우선 사용, 없으면 종류로 추론(커피/음료/디저트/식사/사이드/주류 등).\n"+
+      "[정확성] 흐릿하거나 확실치 않은 항목은 추측하지 말고 빼라. 글자를 임의로 만들지 마라.\n"+
+      "출력은 JSON 배열 하나만(설명·코드펜스 금지): [{\"name\":\"\",\"cat\":\"\",\"price\":0,\"desc\":\"\"}]. 최대 40개.";
+    aiComplete({
+        system:sys,
+        blocks:[
+          {type:"image", mime:mm[1], data:mm[2]},
+          {type:"text", text:"이 메뉴판을 위 규칙대로 구조화해줘. JSON 배열만 출력."}
+        ],
+        max_tokens:2200, temperature:0, json:true, prefill:"["
+      })
+      .then(function(txt){
+        var arr=parseJSONLoose(txt);
+        if(!Array.isArray(arr)||!arr.length){ return collectDemo(box, "사진에서 메뉴를 찾지 못해 샘플로 진행"); }
+        arr = cleanDraft(arr);
+        if(!arr.length){ return collectDemo(box, "유효한 메뉴를 찾지 못해 샘플로 진행"); }
+        renderDraft(box, arr, "📷 Vision 인식 완료");
+      })
+      .catch(function(err){ collectDemo(box, "Vision 호출 실패: "+err.message); });
+    return;
+  }
+
+  // key but no image: be honest about URL parsing
+  if(getKey() && !hasImg){
+    toast("실제 인식은 메뉴판 사진을 올려주세요");
+  }
+  collectDemo(box);
+}
+
+/* demo (sample) draft with animation */
+function collectDemo(box, note){
+  box.innerHTML='<div class="result-card"><div class="rh"><div class="re">🤖</div><div><div class="rn">'+(note||"수집 중…")+'</div><div class="rsub">네이버 메뉴 · 홈페이지 · OCR 분석</div></div></div>'+
+    '<div class="steps">'+
+    ['공개 출처 탐색','메뉴명 추출','가격 추정','카테고리 분류'].map(function(t,i){
+      return '<div class="step act" style="opacity:'+(0.4+i*0.15)+'"><div class="marker"><div class="bullet">⏳</div><div class="line"></div></div><div class="body"><div class="st">'+t+'</div></div></div>';
+    }).join("")+'</div></div>';
+  setTimeout(function(){
+    renderDraft(box, [
+      {name:"아메리카노", cat:"커피", price:4000},
+      {name:"카페라떼", cat:"커피", price:4800},
+      {name:"바닐라라떼", cat:"커피", price:5300},
+      {name:"수제 휘낭시에", cat:"디저트", price:3500},
+      {name:"플레인 스콘", cat:"디저트", price:3200}
+    ], "📋 샘플 초안 (데모)");
+  }, 1700);
+}
+
+/* normalize, dedup and filter draft rows from Vision */
+function cleanDraft(arr){
+  var seen={}, out=[];
+  arr.forEach(function(d){
+    if(!d) return;
+    var name=(""+(d.name||"")).trim();
+    if(!name) return;
+    if(/전화|영업|주소|배달|문의|instagram|insta|@|카카오/i.test(name)) return; // non-menu noise
+    var key=name.replace(/\s/g,"");
+    if(seen[key]) return; seen[key]=1;
+    out.push({ name:name, cat:(""+(d.cat||"")).trim(), price:normPrice(d.price), desc:(""+(d.desc||"")).trim() });
+  });
+  return out.slice(0,40);
+}
+/* render editable draft rows */
+function renderDraft(box, arr, title){
+  window._draft = arr;
+  box.innerHTML =
+    '<div class="result-card"><div class="rh"><div class="re">📋</div>'+
+      '<div><div class="rn">'+title+' · '+arr.length+'개</div><div class="rsub">가격만 확인·수정하세요</div></div></div>'+
+    arr.map(function(d,i){
+      var sub=[d.cat, d.desc].filter(Boolean).join(" · ");
+      return '<div class="draft-row"><div class="dn">'+d.name+(sub?'<small>'+sub+'</small>':'')+'</div>'+
+        '<div class="dp"><input type="number" inputmode="numeric" value="'+(d.price||0)+'" data-draft="'+i+'"><span class="won">원</span></div></div>';
+    }).join("")+
+    '<button class="cta grape" style="margin-top:16px" data-action="collect-import">초안을 내 가게로 가져오기</button></div>';
+  box.scrollIntoView({behavior:"smooth",block:"start"});
+}
+
+/* ====================================================== QR ========= */
+function showQR(url, name){
+  var box=$("#qrbox");
+  if(!box){ return; }
+  box.innerHTML="";
+  try{
+    new QRCode(box, { text:"https://"+url, width:160, height:160, colorDark:"#1B1024", colorLight:"#ffffff" });
+    var cap=document.createElement("div");
+    cap.style.cssText="text-align:center;font-size:11px;color:var(--sub);margin-top:8px;width:100%";
+    cap.textContent=(name?name+" · ":"")+"매장 테이블에 붙이면 바로 주문";
+    box.appendChild(cap);
+    box.scrollIntoView({behavior:"smooth",block:"center"});
+  }catch(e){
+    box.innerHTML='<div class="tip">QR 라이브러리를 불러오지 못했어요 (오프라인). 배포 후 정상 표시됩니다.</div>';
+  }
+}
+
+/* ====================================================== EVENTS ===== */
+var fileTarget = null; // "menu" or "ocr"
+
+document.addEventListener("click", function(e){
+  var el = e.target.closest("[data-action]");
+  // close sheet when tapping backdrop
+  if(e.target.classList && e.target.classList.contains("sheet-bg")){ e.target.remove(); return; }
+  if(!el) return;
+  var a = el.getAttribute("data-action");
+
+  if(a==="nav"){ location.hash = el.getAttribute("data-to"); return; }
+  if(a==="go-store"){ location.hash = "#/cafe/"+el.getAttribute("data-slug"); return; }
+  if(a==="go-order"){ location.hash = "#/order/"+encodeURIComponent(el.getAttribute("data-store"))+"/"+encodeURIComponent(el.getAttribute("data-menu")); return; }
+  if(a==="go-product"){ location.hash = "#/p/"+encodeURIComponent(el.getAttribute("data-shop"))+"/"+encodeURIComponent(el.getAttribute("data-prod")); return; }
+  if(a==="pick-candidate"){
+    var psh=findShop(el.getAttribute("data-shop")); var pid=el.getAttribute("data-prod"); var pp=null;
+    if(psh){ for(var pi=0;pi<psh.products.length;pi++){ if(psh.products[pi].id===pid) pp=psh.products[pi]; } }
+    if(psh&&pp){ playShopSteps(psh, pp, shopIntentFor(pp, window._lastAItext||"")); } return;
+  }
+
+  // seller (상품 등록)
+  if(a==="suggest-tags"){ suggestTags(); return; }
+  if(a==="add-tag"){
+    var tag=el.getAttribute("data-tag");
+    var inp=$("#s-tags"); var v=(inp.value||"").trim();
+    var parts=v?v.split(/[,\n]/).map(function(x){return x.trim();}).filter(Boolean):[];
+    if(parts.map(function(x){return x.toLowerCase();}).indexOf(tag.toLowerCase())<0) parts.push(tag);
+    inp.value=parts.join(", ");
+    renderTagSug(window._tagSug||[]);
+    return;
+  }
+  if(a==="sell-tab"){ DB.set("fl_sell_tab", el.getAttribute("data-v")); renderSell(); return; }
+  if(a==="sell-add-img"){ var fi=$("#f-imgs"); if(fi) fi.click(); return; }
+  if(a==="sell-del-img"){ var idx=parseInt(el.getAttribute("data-i"),10); (window._sellImgs||[]).splice(idx,1); renderImgStrip(); renderDescPrev(); return; }
+  if(a==="sell-cond"){ window._sellCond=el.getAttribute("data-val"); var wp=el.parentNode; wp.querySelectorAll(".opt").forEach(function(b){b.classList.remove("on");}); el.classList.add("on"); return; }
+  if(a==="sell-deliv"){ window._sellDeliv=el.getAttribute("data-val"); var wpd=el.parentNode; wpd.querySelectorAll(".opt").forEach(function(b){b.classList.remove("on");}); el.classList.add("on"); return; }
+  if(a==="save-product"){ saveProduct(); return; }
+  if(a==="del-product"){ delProduct(el.getAttribute("data-id")); return; }
+
+  if(a==="copy-route"){ copyText("https://"+$("#urlText").textContent); return; }
+  if(a==="copy-url"){ copyText("https://"+el.getAttribute("data-url")); return; }
+  if(a==="show-qr"){ showQR(el.getAttribute("data-url"), el.getAttribute("data-name")); return; }
+
+  // order options
+  if(a==="opt"){
+    var kind=el.getAttribute("data-kind"), val=el.getAttribute("data-val");
+    if(kind==="temp") orderState.temp=val; else orderState.size=val;
+    var wrap=el.parentNode; wrap.querySelectorAll(".opt").forEach(function(b){ b.classList.remove("on"); });
+    el.classList.add("on"); return;
+  }
+  if(a==="qty"){
+    var d=parseInt(el.getAttribute("data-d"),10);
+    orderState.qty=Math.max(1, orderState.qty+d);
+    var parts=location.hash.replace(/^#\/?/,"").split("/").filter(Boolean);
+    var s=findStore(parts[1]); var m=findMenu(s,parts[2]);
+    if(m) updateOrderPrice(m); return;
+  }
+  if(a==="add-cart"){
+    var s2=findStore(el.getAttribute("data-store"));
+    var m2=null; if(s2){ for(var i=0;i<s2.menus.length;i++){ if(s2.menus[i].id===el.getAttribute("data-menu")) m2=s2.menus[i]; } }
+    if(s2&&m2){
+      var c=cart();
+      c.push({store:s2.name, slug:s2.slug, name:m2.name, price:m2.price, qty:orderState.qty, temp:orderState.temp, size:orderState.size});
+      saveCart(c); openCheckout();
+    } return;
+  }
+  if(a==="open-checkout"){ openCheckout(); return; }
+
+  // shopping interactions
+  if(a==="pick-seller"){
+    shopState.seller=parseInt(el.getAttribute("data-i"),10)||0;
+    var wp=el.parentNode; wp.querySelectorAll(".seller").forEach(function(b){ b.classList.remove("on"); });
+    el.classList.add("on");
+    var ph=location.hash.replace(/^#\/?/,"").split("/").filter(Boolean);
+    var sh0=findShop(ph[1]); var p0=findProduct(sh0,ph[2]); if(p0) updateProductPrice(p0); return;
+  }
+  if(a==="opt-shop"){
+    var key=el.getAttribute("data-key"), v2=el.getAttribute("data-val");
+    shopState.opts[key]=v2;
+    var wrap2=el.parentNode; wrap2.querySelectorAll(".opt").forEach(function(b){ b.classList.remove("on"); });
+    el.classList.add("on"); return;
+  }
+  if(a==="qty-shop"){
+    var dd=parseInt(el.getAttribute("data-d"),10);
+    shopState.qty=Math.max(1, shopState.qty+dd);
+    var ph2=location.hash.replace(/^#\/?/,"").split("/").filter(Boolean);
+    var sh1=findShop(ph2[1]); var p1=findProduct(sh1,ph2[2]); if(p1) updateProductPrice(p1); return;
+  }
+  if(a==="add-cart-shop"){
+    var sh2=findShop(el.getAttribute("data-shop"));
+    var p2=null; if(sh2){ for(var z=0;z<sh2.products.length;z++){ if(sh2.products[z].id===el.getAttribute("data-prod")) p2=sh2.products[z]; } }
+    if(sh2&&p2){
+      var se=p2.sellers[shopState.seller];
+      var c2=cart();
+      c2.push({store:sh2.name, name:p2.name, price:se.price, qty:shopState.qty, sub:[se.name].concat(Object.keys(shopState.opts).map(function(k){return shopState.opts[k];})).join(" · ")});
+      saveCart(c2); openCheckout();
+    } return;
+  }
+
+  if(a==="close-sheet"){ var sb=$(".sheet-bg"); if(sb) sb.remove(); return; }
+  if(a==="pay"){ var sb2=$(".sheet-bg"); if(sb2) sb2.remove(); toast("✅ 결제 완료 (데모)"); saveCart([]); return; }
+  if(a==="clear-cart"){ saveCart([]); var sb3=$(".sheet-bg"); if(sb3) sb3.remove(); toast("장바구니를 비웠어요"); return; }
+
+  // AI
+  if(a==="ai-fill"){ $("#aiq").value = el.getAttribute("data-q"); return; }
+  if(a==="ai-run"){ runAI($("#aiq").value); return; }
+  if(a==="ai-voice"){ startVoice(); return; }
+
+  // admin
+  if(a==="admin-login"){ DB.set("fl_owner", el.getAttribute("data-slug")); renderAdmin(); return; }
+  if(a==="new-store"){ renderNewStore(); return; }
+  if(a==="go-admin"){ DB.set("fl_admin_tab","add"); if(location.hash!=="#/admin"){ location.hash="#/admin"; } else { renderAdmin(); } return; }
+  if(a==="del-store"){
+    var dslug=el.getAttribute("data-slug"); var dst=findStore(dslug);
+    if(!confirm((dst?dst.name:"이 상점")+" 상점을 삭제할까요?\n등록한 메뉴도 함께 사라집니다.")) return;
+    saveStores(stores().filter(function(x){return x.slug!==dslug;}));
+    var ow=ownedSlugs().filter(function(x){return x!==dslug;}); saveOwned(ow);
+    if(DB.get("fl_owner")===dslug){ DB.set("fl_owner", ow[0]||""); }
+    toast("상점을 삭제했어요"); renderNewStore(); return;
+  }
+  if(a==="geo-fill"){
+    var gi=$("#ns-area"); if(!gi) return;
+    if(!navigator.geolocation){ toast("이 기기는 위치를 지원하지 않아요"); return; }
+    var op=gi.placeholder; gi.placeholder="📍 위치 확인 중…";
+    navigator.geolocation.getCurrentPosition(function(pos){
+      var lat=pos.coords.latitude, lon=pos.coords.longitude;
+      fetch("https://nominatim.openstreetmap.org/reverse?format=json&lat="+lat+"&lon="+lon+"&accept-language=ko&zoom=18",{headers:{"Accept":"application/json"}})
+        .then(function(r){return r.json();})
+        .then(function(d){ var addr=(d&&d.display_name)||""; gi.value=addr?addr.replace(/,\s*(대한민국|South Korea)\s*$/,""):(lat.toFixed(5)+", "+lon.toFixed(5)); gi.placeholder=op; toast("현위치 주소를 넣었어요"); })
+        .catch(function(){ gi.value=lat.toFixed(5)+", "+lon.toFixed(5); gi.placeholder=op; toast("좌표로 넣었어요(주소 변환 실패)"); });
+    }, function(){ gi.placeholder=op; toast("위치 권한을 허용해 주세요"); }, {enableHighAccuracy:true, timeout:9000, maximumAge:60000});
+    return;
+  }
+  if(a==="switch-store"){ DB.set("fl_owner", el.getAttribute("data-slug")); DB.set("fl_admin_tab","add"); renderAdmin(); return; }
+  if(a==="create-store"){
+    var owned=ownedSlugs();
+    if(owned.length>=5){ toast("상점은 최대 5개까지 등록할 수 있어요"); return; }
+    var nm=(($("#ns-name")||{}).value||"").trim();
+    if(!nm){ toast("상점 이름을 입력해 주세요"); return; }
+    var emoji=(($("#ns-emoji")||{}).value||"🏪").trim()||"🏪";
+    var cat=(($("#ns-cat")||{}).value||"").trim();
+    var area=(($("#ns-area")||{}).value||"").trim();
+    var slug="shop"+Date.now().toString(36);
+    var ss=stores(); ss.push({slug:slug,name:nm,emoji:emoji,cat:cat,area:area||"내 상점",menus:[]}); saveStores(ss);
+    owned.push(slug); saveOwned(owned);
+    DB.set("fl_owner", slug); DB.set("fl_admin_tab","add");
+    toast("🏪 "+nm+" 상점을 만들었어요!");
+    renderAdmin(); return;
+  }
+  if(a==="admin-tab"){ DB.set("fl_admin_tab", el.getAttribute("data-v")); renderAdmin(); return; }
+  if(a==="pick-photo"){ fileTarget="menu"; $("#f-file").click(); return; }
+  if(a==="pick-ocr"){ fileTarget="ocr"; ensureOcrInput(); return; }
+  if(a==="save-menu"){ saveMenu(el.getAttribute("data-slug")); return; }
+  if(a==="del-menu"){ delMenu(el.getAttribute("data-slug"), el.getAttribute("data-id")); return; }
+  if(a==="vis-cycle"){ updateMenu(el.getAttribute("data-slug"), el.getAttribute("data-id"), function(m){ m.vis=nextVis(vis(m)); }); renderAdmin(); return; }
+  if(a==="toggle-price"){ updateMenu(el.getAttribute("data-slug"), el.getAttribute("data-id"), function(m){ m.hidePrice=!m.hidePrice; }); renderAdmin(); return; }
+  if(a==="toggle-sold"){ updateMenu(el.getAttribute("data-slug"), el.getAttribute("data-id"), function(m){ m.soldout=!m.soldout; }); renderAdmin(); return; }
+  if(a==="toggle-pause"){ updateStore(el.getAttribute("data-slug"), function(s){ s.paused=!s.paused; }); toast("영업 상태를 변경했어요"); renderAdmin(); return; }
+
+  // collect
+  if(a==="collect-run"){ runCollect(); return; }
+  if(a==="collect-import"){ importDraft(); return; }
+
+  // settings
+  if(a==="set-provider"){ DB.set("fl_provider", el.getAttribute("data-v")); renderSettings(); return; }
+  if(a==="save-key"){
+    var k=($("#apikey").value||"").trim();
+    if(!k){ toast("키를 입력하세요"); return; }
+    DB.set("fl_key_"+getProvider(), k);
+    var gm=$("#gmodel"); if(gm && gm.value.trim()) DB.set("fl_gmodel", gm.value.trim());
+    toast("🔑 "+(getProvider()==="gemini"?"Gemini":"Claude")+" 연결됨"); renderSettings(); return;
+  }
+  if(a==="clear-key"){ DB.set("fl_key_"+getProvider(),""); toast("키를 삭제했어요 (데모 모드)"); renderSettings(); return; }
+});
+
+/* keep sheet open when tapping inside */
+document.addEventListener("click", function(e){
+  if(e.target.closest("[data-stop]")) e.stopPropagation();
+}, true);
+
+/* file upload preview */
+document.addEventListener("change", function(e){
+  if(e.target.id==="f-file" && e.target.files[0]){
+    var r=new FileReader();
+    r.onload=function(){ window._menuPhoto=r.result; var inner=$("#upInner"); if(inner) inner.innerHTML='<img src="'+r.result+'">사진 첨부됨 · 변경하려면 탭'; };
+    r.readAsDataURL(e.target.files[0]);
+  }
+  if(e.target.id==="f-imgs" && e.target.files && e.target.files.length){
+    var files=Array.prototype.slice.call(e.target.files);
+    (function addNext(){
+      if(!window._sellImgs) window._sellImgs=[];
+      if(!files.length || window._sellImgs.length>=8){ renderImgStrip(); renderDescPrev(); e.target.value=""; return; }
+      var f=files.shift();
+      var rr=new FileReader();
+      rr.onload=function(){ resizeImage(rr.result, 1100, function(small){ if(window._sellImgs.length<8) window._sellImgs.push(small); addNext(); }); };
+      rr.readAsDataURL(f);
+    })();
+  }
+  if(e.target.id==="f-ocr" && e.target.files[0]){
+    var ro=new FileReader();
+    ro.onload=function(){
+      resizeImage(ro.result, 1568, function(resized){
+        window._ocrPhoto=resized;
+        var oi=$("#src-ocr"); if(oi) oi.value="🖼️ 사진 첨부됨 — AI 초안 만들기를 누르세요";
+      });
+    };
+    ro.readAsDataURL(e.target.files[0]);
+  }
+});
+function ensureOcrInput(){
+  var inp=$("#f-ocr");
+  if(!inp){ inp=document.createElement("input"); inp.type="file"; inp.id="f-ocr"; inp.accept="image/*"; inp.style.display="none"; document.body.appendChild(inp); }
+  inp.click();
+}
+
+function saveMenu(slug){
+  var name=($("#f-name").value||"").trim();
+  var price=parseInt($("#f-price").value,10);
+  if(!name){ toast("메뉴 이름을 입력하세요"); return; }
+  if(!price||price<0){ toast("가격을 입력하세요"); return; }
+  var desc=($("#f-desc").value||"").trim();
+  var emoji=($("#f-emoji").value||"🍽️").trim();
+  var ss=stores(); var s=null;
+  for(var i=0;i<ss.length;i++){ if(ss[i].slug===slug) s=ss[i]; }
+  if(!s) return;
+  var id="m"+Date.now();
+  var menu={id:id, name:name, price:price, desc:desc, emoji:emoji};
+  if(window._menuPhoto){ menu.img=window._menuPhoto; window._menuPhoto=null; }
+  s.menus.push(menu); saveStores(ss);
+  var url=HOST+"/order/"+s.name+"/"+name;
+  $("#genResult").innerHTML =
+    '<div class="gen-url"><div class="gt">✅ 공개 URL 자동 생성됨</div>'+
+      '<div class="gu">https://'+HOST+'/order/<span class="hl">'+s.name+'</span>/<span class="hl">'+name+'</span></div></div>'+
+    '<div class="urlcard" style="margin-top:10px"><div class="t">🔗 바로 공유하기</div>'+
+      '<div class="acts"><button class="btn-line" data-action="copy-url" data-url="'+url+'">링크 복사</button>'+
+      '<button class="btn-line" data-action="show-qr" data-url="'+url+'" data-name="'+name+'">QR 생성</button></div></div>'+
+    '<div id="qrbox"></div>';
+  // reset form
+  $("#f-name").value=""; $("#f-price").value=""; $("#f-desc").value="";
+  var inner=$("#upInner"); if(inner) inner.textContent="📷 사진 올리기 / 이모지로 대체";
+  toast("메뉴가 등록됐어요");
+  $("#genResult").scrollIntoView({behavior:"smooth",block:"center"});
+}
+function delMenu(slug,id){
+  var ss=stores();
+  for(var i=0;i<ss.length;i++){ if(ss[i].slug===slug){ ss[i].menus=ss[i].menus.filter(function(m){return m.id!==id;}); } }
+  saveStores(ss); renderAdmin(); toast("메뉴를 삭제했어요");
+}
+function catEmoji(cat){
+  cat=(cat||"");
+  if(/커피|아메|라떼|에스프/.test(cat)) return "☕";
+  if(/차|티|음료|에이드/.test(cat)) return "🥤";
+  if(/디저트|케이크|빵|쿠키|스콘/.test(cat)) return "🧁";
+  if(/치킨/.test(cat)) return "🍗";
+  if(/버거|햄버/.test(cat)) return "🍔";
+  if(/면|국수|파스타/.test(cat)) return "🍜";
+  if(/밥|덮밥|돈까스/.test(cat)) return "🍱";
+  return "🍽️";
+}
+function importDraft(){
+  var owner=DB.get("fl_owner");
+  if(!owner){ toast("먼저 사장님 탭에서 로그인하세요"); location.hash="#/admin"; return; }
+  var draft = window._draft || [];
+  var inputs=document.querySelectorAll("[data-draft]");
+  var ss=stores(); var s=null; for(var i=0;i<ss.length;i++){ if(ss[i].slug===owner) s=ss[i]; }
+  if(!s){ toast("가게를 찾을 수 없어요"); return; }
+  var added=0;
+  inputs.forEach(function(inp,idx){
+    var d=draft[idx]||{}; var nm=(d.name||"").trim();
+    if(!nm) return;
+    s.menus.push({id:"m"+Date.now()+idx, name:nm, price:parseInt(inp.value,10)||0, emoji:catEmoji(d.cat), desc:(d.desc||("AI 수집 초안 · "+(d.cat||"")))});
+    added++;
+  });
+  saveStores(ss);
+  toast("✅ "+added+"개 메뉴를 가져왔어요");
+  DB.set("fl_admin_tab","list");
+  location.hash="#/admin";
+}
+
+/* clipboard */
+function copyText(t){
+  try{ navigator.clipboard.writeText(t).then(function(){ toast("📋 링크 복사됨"); }, function(){ legacyCopy(t); }); }
+  catch(e){ legacyCopy(t); }
+}
+function legacyCopy(t){
+  var ta=document.createElement("textarea"); ta.value=t; document.body.appendChild(ta); ta.select();
+  try{ document.execCommand("copy"); toast("📋 링크 복사됨"); }catch(e){ toast("복사 실패 — 수동 복사하세요"); }
+  ta.remove();
+}
+
+/* voice */
+function startVoice(){
+  var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if(!SR){ toast("이 브라우저는 음성인식을 지원하지 않아요"); return; }
+  var rec=new SR(); rec.lang="ko-KR"; rec.interimResults=false;
+  var btn=$("#micBtn"); if(btn) btn.classList.add("rec");
+  rec.onresult=function(ev){ var t=ev.results[0][0].transcript; $("#aiq").value=t; runAI(t); };
+  rec.onerror=function(){ toast("음성 인식 실패"); };
+  rec.onend=function(){ if(btn) btn.classList.remove("rec"); };
+  rec.start();
+}
+
+/* receive keys passed from PodoAI (via #keys=base64) */
+function applyIncomingKeys(){
+  var h=location.hash||"";
+  if(h.indexOf("#keys=")!==0) return false;
+  try{
+    var p=JSON.parse(decodeURIComponent(escape(atob(h.slice(6)))));
+    if(p.k) DB.set("fl_key_claude", p.k);
+    if(p.gk) DB.set("fl_key_gemini", p.gk);
+    var prov = (p.prov==="gemini" && p.gk) ? "gemini" : (p.k ? "claude" : (p.gk ? "gemini" : (p.prov||"claude")));
+    DB.set("fl_provider", prov);
+    if(p.gm) DB.set("fl_gmodel", p.gm);
+    toast("🔑 PodoAI 키를 불러왔어요");
+  }catch(e){}
+  history.replaceState(null,"","#/");
+  return true;
+}
+
+/* ---------- boot ---------- */
+seed();
+seedShops();
+applyIncomingKeys();
+// PodoAI 홈에서 ?reg=shop(상품등록) / ?reg=food(음식점등록)로 들어오면 해당 등록화면으로 바로 이동
+try{
+  var _rp=new URLSearchParams(location.search).get("reg");
+  if(_rp==="shop") location.hash="#/sell";
+  else if(_rp==="food") location.hash="#/admin";
+}catch(e){}
+window.addEventListener("hashchange", router);
+router();
+</script>
+</body>
+</html>
