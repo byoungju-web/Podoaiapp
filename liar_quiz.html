@@ -1,0 +1,216 @@
+<html lang="ko"><head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>LIE &amp; QUIZ - 대기시간 파티게임</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Pretendard',sans-serif}
+body{background:#0f0f14;color:#fff;display:flex;justify-content:center;padding:16px;min-height:100vh}
+.app{width:100%;max-width:420px}
+.header{text-align:center;margin:18px 0 10px;padding-top:26px}
+.header h1{font-size:28px;letter-spacing:-1px}
+.badge{display:inline-block;background:#1e1e2a;border:1px solid #333;border-radius:20px;padding:4px 10px;font-size:12px;color:#aaa;margin-top:6px}
+.tabs{display:flex;gap:8px;margin:14px 0}
+.tab{flex:1;padding:14px;border-radius:14px;border:0;font-weight:800;font-size:15px;cursor:pointer;transition:.15s}
+.tab.active{background:linear-gradient(90deg,#8b5cf6,#ec4899);color:#fff}
+.tab.inactive{background:#1e1e2a;color:#888}
+.card{background:#1e1e2a;border-radius:20px;padding:18px;margin-bottom:14px;border:1px solid #2a2a3a}
+.input{width:100%;padding:12px;border-radius:12px;border:1px solid #333;background:#12121a;color:#fff;margin:6px 0;font-size:14px;outline:none}
+.input:focus{border-color:#8b5cf6}
+.btn{width:100%;padding:14px;border-radius:14px;border:0;background:linear-gradient(90deg,#8b5cf6,#ec4899);color:#fff;font-weight:800;font-size:15px;cursor:pointer}
+.btn:active{transform:scale(.97)}
+.btn2{background:#2a2a3a;color:#fff}
+.option{width:100%;padding:12px 14px;border-radius:12px;border:1px solid #333;background:#2a2a3a;color:#fff;margin:6px 0;text-align:left;cursor:pointer;font-size:14px}
+.option:hover{border-color:#8b5cf6}
+.correct{background:#14532d!important;border-color:#22c55e!important}
+.wrong{background:#7f1d1d!important;border-color:#ef4444!important}
+.result{padding:12px;border-radius:12px;background:#12121a;margin-top:10px;border:1px dashed #8b5cf6;font-size:14px;line-height:1.4}
+.score{color:#a78bfa;font-weight:700}
+.bar{height:6px;background:#2a2a3a;border-radius:3px;overflow:hidden;margin:10px 0}
+.fill{height:100%;background:linear-gradient(90deg,#8b5cf6,#ec4899);transition:width .4s}
+</style>
+<script src="https://js.puter.com/v2/"></script>
+</head>
+<button onclick="location.href='index.html'" style="position:fixed;top:10px;left:10px;z-index:10000;display:flex;align-items:center;gap:5px;padding:8px 13px;border-radius:999px;border:none;background:rgba(255,255,255,.92);box-shadow:0 2px 10px rgba(0,0,0,.18);color:#5b21b6;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit;-webkit-tap-highlight-color:transparent"><span style="font-size:15px;line-height:1">‹</span><svg width="15" height="15" viewBox="0 0 58 58" fill="none" style="flex-shrink:0"><path d="M29 21v-7" stroke="#4ca64c" stroke-width="3" stroke-linecap="round"/><circle cx="29" cy="26" r="5" fill="#7c3aed"/><circle cx="21" cy="33" r="5" fill="#8b5cf6"/><circle cx="37" cy="33" r="5" fill="#8b5cf6"/><circle cx="29" cy="40" r="5" fill="#6d28d9"/></svg>포도야</button>
+<body>
+<div class="app">
+<div class="header"><div style="display:flex;flex-direction:column;align-items:center"><svg width="58" height="58" viewBox="0 0 58 58" fill="none" aria-label="포도야"><path d="M29 21v-7M29 14.5c3-2.5 6.5-1.5 8 1" stroke="#4ca64c" stroke-width="2.6" stroke-linecap="round"/><circle cx="29" cy="25.5" r="4.6" fill="#7c3aed"/><circle cx="21.6" cy="32" r="4.6" fill="#8b5cf6"/><circle cx="36.4" cy="32" r="4.6" fill="#8b5cf6"/><circle cx="29" cy="38.5" r="4.6" fill="#6d28d9"/><circle cx="24" cy="45" r="4.2" fill="#7c3aed"/><circle cx="34" cy="45" r="4.2" fill="#7c3aed"/></svg></div>
+<h1>🤥 LIE &amp; QUIZ ⚡</h1>
+<div class="badge">대기시간 1분 컷 • OpenClaw + MCP 데모</div>
+<p style="margin-top:10px" class="score">🏆 총점 <span id="total">0</span></p>
+</div>
+
+<div class="tabs">
+<button id="t1" class="tab active" onclick="switchTab('liar')">🤥 거짓말 배틀</button>
+<button id="t2" class="tab inactive" onclick="switchTab('quiz')">⚡ 퀴즈 러시</button>
+</div>
+
+<div id="liarView">
+<div class="card">
+<h3 style="margin-bottom:8px">1단계 - 네가 3문장 써봐</h3>
+<p style="font-size:12px;color:#888;margin-bottom:8px">2진실 1거짓, AI가 탐지한다</p>
+<input id="s1" class="input" placeholder="예: 어제 5km 달렸다">
+<input id="s2" class="input" placeholder="예: 아침에 라면 먹었다">
+<input id="s3" class="input" placeholder="예: BTS랑 카톡한다">
+<button class="btn" onclick="detect()">AI 탐지기 가동 🤖</button>
+<div id="lr"></div>
+</div>
+<div class="card">
+<h3>2단계 - AI 거짓말 맞추기</h3>
+<div id="ai" style="margin-top:10px"><button class="option" onclick="guess(0)">1. 나는 어제 100km 달렸어 🏃‍♂️</button><button class="option" onclick="guess(1)">2. 나는 사실 냉장고가 될 뻔 했어 🧊</button><button class="option" onclick="guess(2)">3. 나는 3개 국어를 해 🗣️</button></div>
+<div id="ar"></div>
+<button class="btn btn2" style="margin-top:10px" onclick="newAI()">다른 문제 🔄</button>
+</div>
+</div>
+
+<div id="quizView" style="display:none">
+<div class="card">
+<div style="display:flex;justify-content:space-between;font-size:13px;color:#aaa"><span id="qp">0/5</span><span id="qt">30s</span></div>
+<div class="bar"><div id="fill" class="fill" style="width:100%"></div></div>
+<h2 id="qq" style="font-size:18px;margin:10px 0;line-height:1.3">30초 안에 5문제를 맞춰봐! 시작을 눌러줘</h2>
+<div id="qo"></div>
+<div id="qf" style="margin-top:8px;font-size:14px"></div>
+<button id="wq" class="btn btn2" style="margin-bottom:8px;font-size:13px" onclick="toggleAI()">📚 기본 문제 8개</button>
+<button id="qs" class="btn" onclick="startQuiz()">게임 시작 🚀</button>
+</div>
+<div class="card" style="font-size:12px;color:#666">
+✨ <b>AI 새 문제</b>를 켜면 매번 다른 한국어 문제가 나와요.<br>
+🔑 <b>API 키도 서버도 필요 없어요</b> — 그냥 켜면 돼요.<br>
+😅 AI가 안 되면 기본 8문제로 알아서 넘어가요.
+</div>
+</div>
+</div>
+
+<script>
+let total=0, aiIdx=0;
+const liarSet=[
+["나는 어제 100km 달렸어 🏃‍♂️","나는 사실 냉장고가 될 뻔 했어 🧊","나는 3개 국어를 해 🗣️",0],
+["아침에 피자 3판 먹었어 🍕","귀신 본 적 있어 👻","코딩하면서 잔다 💻",0],
+["오늘 10번 웃었다 😂","지구 2번 구했다 🌍","라면 끓이기 장인이다 🍜",1],
+["나는 비밀 요원이다 🕵️","나는 어제 2시에 잤다 😴","나는 고양이 5마리 키워 🐱",0]
+];
+const qBank=[
+{q:"전세계에서 가장 많이 배달되는 음식은?",o:["치킨","피자","햄버거","초밥"],a:1},
+{q:"MCP는 무슨 약자?",o:["My Cute Puppy","Model Context Protocol","More Coffee Please","Mega Pop"],a:1},
+{q:"엘베에서 제일 어색한 행동은?",o:["거울 보기","모두와 눈 마주치기","폰 보기","천장 보기"],a:1},
+{q:"대기시간에 한국인이 제일 많이 하는 건?",o:["인스타","한숨","메모","이 게임"],a:3},
+{q:"OpenClaw 옛 이름은?",o:["Clawdbot","Catbot","Crabbot","Clawmachine"],a:0},
+{q:"AI가 제일 못하는 번역은?",o:["사랑해","배고파","ㅋㅋㅋㅋ","보고싶어"],a:2},
+{q:"우주에서 가장 시끄러운 곳은?",o:["블랙홀 옆","내 머릿속","지하철","회사 회의"],a:1},
+{q:"1+1을 AI에게 물으면?",o:["2","상황에 따라 다릅니다","창의적으로 3","계산 중..."],a:1}
+];
+let order=[], qi=0, qscore=0, time=30, timer=null, playing=false;
+
+function shuffle(a){ return [...a].sort(()=>0.5-Math.random()); }
+
+/* ══ ✨ AI가 한국어 문제를 만든다 ══
+   OpenTDB(영어·5초 제한·서버 필요) 대신 AI로 간다:
+     · 한국어 ✅  · 이 게임 톤(유머) 유지 ✅  · 무한 생성 ✅  · 서버 불필요 ✅
+   Puter를 쓰면 API 키도 필요 없다. 실패하면 조용히 내장 문제로 돈다 — 게임이 멈추면 안 되니까. */
+const AI_SYS='너는 한국어 파티게임 퀴즈 출제자야. JSON 배열만 출력(설명·코드펜스 금지).\n'+
+'[{"q":"질문","o":["보기1","보기2","보기3","보기4"],"a":정답번호(0~3)}]\n'+
+'규칙: 정확히 5문제. 짧고 웃기게. 대기시간에 친구랑 킥킥대며 푸는 톤.\n'+
+'예시 톤: "엘베에서 제일 어색한 행동은?", "대기시간에 한국인이 제일 많이 하는 건?"\n'+
+'상식·밈·일상 공감 섞어서. 보기는 4개, 답은 명확하게. 정치·종교·비하는 빼라.';
+function aiReady(){ return typeof puter!=='undefined' && puter.ai && puter.ai.chat; }
+async function aiMakeQ(){
+  if(!aiReady()) return null;
+  try{
+    const res=await puter.ai.chat(
+      [{role:'system',content:AI_SYS},{role:'user',content:'새 문제 5개 만들어줘. 매번 다르게.'}],
+      { model:'google/gemini-3.5-flash', max_tokens:900 }
+    );
+    let txt='';
+    const c=res && res.message && res.message.content;
+    if(typeof c==='string') txt=c;
+    else if(Array.isArray(c)) txt=c.map(b=>(b&&b.text)||'').join('');
+    else txt=String(res&&res.text||res||'');
+    const arr=JSON.parse(txt.replace(/```json|```/g,'').trim());
+    if(!Array.isArray(arr)||!arr.length) return null;
+    return arr.filter(x=>x&&x.q&&Array.isArray(x.o)&&x.o.length>=2&&typeof x.a==='number')
+              .slice(0,5).map(x=>({q:String(x.q),o:x.o.map(String),a:Math.max(0,Math.min(x.o.length-1,x.a|0))}));
+  }catch(e){ return null; }
+}
+function switchTab(t){
+document.getElementById('liarView').style.display=t==='liar'?'block':'none';
+document.getElementById('quizView').style.display=t==='quiz'?'block':'none';
+document.getElementById('t1').className=t==='liar'?'tab active':'tab inactive';
+document.getElementById('t2').className=t==='quiz'?'tab active':'tab inactive';
+}
+function detect(){
+const v1=document.getElementById('s1').value.trim(), v2=document.getElementById('s2').value.trim(), v3=document.getElementById('s3').value.trim();
+if(!v1||!v2||!v3){document.getElementById('lr').innerHTML='<div class=result>3개 다 적어야 탐지 가능!</div>';return;}
+document.getElementById('lr').innerHTML='<div class=result>🔍 스캔 중... 어휘 분석 • 자신감 수치 측정 • 눈 깜빡임 감지...</div>';
+setTimeout(()=>{
+const pick=Math.floor(Math.random()*3);
+const why=["너무 구체적이라 오히려 의심됨 - 진짜면 이렇게 안 적음","문장이 너무 짧음 - 숨기는 게 있어","이모지 없이 쓴 건 87% 거짓말 패턴"];
+document.getElementById('lr').innerHTML=`<div class=result>💥 <b>${pick+1}번이 거짓말!</b><br>이유: ${why[pick]}<br><br>맞았어? 친구한테 보내서 검증해봐! +10점</div>`;
+total+=10; document.getElementById('total').innerText=total;
+},1100);
+}
+function renderAI(){
+const cur=liarSet[aiIdx];
+let h=''; cur.slice(0,3).forEach((t,i)=>{h+=`<button class=option onclick="guess(${i})">${i+1}. ${t}</button>`});
+document.getElementById('ai').innerHTML=h; document.getElementById('ar').innerHTML='';
+}
+function guess(i){
+const cur=liarSet[aiIdx]; const cor=cur[3];
+const btns=document.querySelectorAll('#ai .option');
+btns.forEach((b,idx)=>{ if(idx===cor) b.classList.add('correct'); else if(idx===i) b.classList.add('wrong'); b.disabled=true; });
+const ar=document.getElementById('ar');
+if(i===cor){ar.innerHTML='<div class=result style=border-color:#22c55e>🎉 정답! 탐지기보다 네가 더 정확해 +100점</div>'; total+=100;}
+else{ar.innerHTML=`<div class=result style=border-color:#ef4444>❌ 땡! 정답은 ${cor+1}번이었어. AI가 널 속였다!</div>`;}
+document.getElementById('total').innerText=total;
+}
+function newAI(){ aiIdx=(aiIdx+1)%liarSet.length; renderAI(); }
+let aiMode=false;
+function toggleAI(){
+  aiMode=!aiMode;
+  const b=document.getElementById('wq');
+  b.innerText = aiMode ? '✨ AI 새 문제 ON' : '📚 기본 문제 8개';
+  b.style.background = aiMode ? 'linear-gradient(90deg,#8b5cf6,#ec4899)' : '#2a2a3a';
+}
+async function startQuiz(){
+const btn=document.getElementById('qs');
+let ai=null;
+if(aiMode){
+  btn.disabled=true; btn.innerText='✨ AI가 문제 만드는 중…';
+  ai=await aiMakeQ();
+  btn.disabled=false; btn.innerText='게임 시작 🚀';
+}
+order = ai || shuffle(qBank).slice(0,5);
+qi=0; qscore=0; time=30; playing=true;
+btn.style.display='none';
+document.getElementById('qf').innerText = (aiMode&&!ai) ? '😅 AI가 안 되네 · 기본 문제로 할게!' : '';
+renderQ();
+timer=setInterval(()=>{ time--; document.getElementById('qt').innerText=time+'s'; document.getElementById('fill').style.width=(time/30*100)+'%'; if(time<=0) endQuiz(); },1000);
+}
+function renderQ(){
+if(qi>=order.length){ endQuiz(); return; }
+const cur=order[qi];
+document.getElementById('qp').innerText=(qi+1)+'/5';
+document.getElementById('qq').innerText=cur.q;
+document.getElementById('qp').innerText=(qi+1)+'/'+order.length+(aiMode?' · ✨AI':'');
+let h=''; cur.o.forEach((o,i)=>{h+=`<button class=option onclick="ans(${i})">${o}</button>`});
+document.getElementById('qo').innerHTML=h; document.getElementById('qf').innerHTML='';
+}
+function ans(i){
+const cur=order[qi]; const btns=document.querySelectorAll('#qo .option');
+btns.forEach((b,idx)=>{ if(idx===cur.a) b.classList.add('correct'); else if(idx===i) b.classList.add('wrong'); b.disabled=true; });
+const f=document.getElementById('qf');
+if(i===cur.a){ qscore+=100; total+=100; f.innerText='✅ 정답!'; } else { f.innerText='❌ 아깝다!'; }
+document.getElementById('total').innerText=total;
+qi++; setTimeout(renderQ,800);
+}
+function endQuiz(){
+clearInterval(timer); playing=false;
+document.getElementById('qq').innerText=`게임 끝! 점수: ${qscore}`;
+document.getElementById('qo').innerHTML=`<div class=result>🏆 ${qscore>=400?'대기시간 킬러!':'조금 더 연습!'}<br>총 ${qscore}점</div>`;
+document.getElementById('qf').innerHTML='';
+document.getElementById('qs').style.display='block'; document.getElementById('qs').innerText='다시 하기 🔄';
+}
+renderAI();
+document.getElementById('qq').innerText='30초 안에 5문제를 맞춰봐! 시작을 눌러줘';
+</script>
+</div>
+
+</body></html>
