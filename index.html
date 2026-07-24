@@ -2326,13 +2326,17 @@ function openYtTool(){
 function researchPipeline(query, deep, onProgress, onDone, onErr){
   if(onProgress) onProgress('🔍 시맨틱 검색 중…');
   exaSearch(query, function(res){
+    res = res || [];
     var top = deep ? res.slice(0,3) : [];
-    var scraped=[]; var i=0;
-    function next(){
-      if(i>=top.length){ synth(); return; }
-      if(onProgress) onProgress('📄 본문 읽는 중… ('+(i+1)+'/'+top.length+')');
-      firecrawlScrape(top[i].url, function(md,title){ scraped.push({title:title||top[i].title||'', md:(md||'').slice(0,3500)}); i++; next(); }, function(){ i++; next(); });
+    var scraped=[]; var done=0, total=top.length;
+    function scrapeOne(item){
+      return new Promise(function(resolve){
+        firecrawlScrape(item.url,
+          function(md,title){ scraped.push({title:title||item.title||'', md:(md||'').slice(0,3500)}); done++; if(onProgress) onProgress('📄 본문 읽는 중… ('+done+'/'+total+')'); resolve(); },
+          function(){ done++; resolve(); });
+      });
     }
+    function next(){ Promise.all(top.map(scrapeOne)).then(function(){ synth(); }); }
     function synth(){
       if(onProgress) onProgress('✍️ 리포트 작성 중…');
       var corpus=res.map(function(r,n){ return '['+(n+1)+'] '+(r.title||'')+' — '+(r.url||'')+'\n'+((r.text||'').slice(0,700)); }).join('\n\n');
