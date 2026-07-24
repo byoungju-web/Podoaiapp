@@ -2322,11 +2322,30 @@ function openYtTool(){
   history.pushState({p:true},'','');
 }
 
-/* ===== ... function(text){ onDone((text||'').trim(), res); }, onErr);
-    }, onErr);
+/* ===== 📊 리서치 파이프라인 (검색→스크랩→종합→작성) ===== */
+function researchPipeline(query, deep, onProgress, onDone, onErr){
+  if(onProgress) onProgress('🔍 시맨틱 검색 중…');
+  exaSearch(query, function(res){
+    var top = deep ? res.slice(0,3) : [];
+    var scraped=[]; var i=0;
+    function next(){
+      if(i>=top.length){ synth(); return; }
+      if(onProgress) onProgress('📄 본문 읽는 중… ('+(i+1)+'/'+top.length+')');
+      firecrawlScrape(top[i].url, function(md,title){ scraped.push({title:title||top[i].title||'', md:(md||'').slice(0,3500)}); i++; next(); }, function(){ i++; next(); });
+    }
+    function synth(){
+      if(onProgress) onProgress('✍️ 리포트 작성 중…');
+      var corpus=res.map(function(r,n){ return '['+(n+1)+'] '+(r.title||'')+' — '+(r.url||'')+'\n'+((r.text||'').slice(0,700)); }).join('\n\n');
+      var deepTxt=scraped.map(function(s,n){ return '=== 본문'+(n+1)+': '+s.title+' ===\n'+s.md; }).join('\n\n');
+      var sys='너는 한국어 리서치 애널리스트야. 아래 자료(검색 결과 + 상세 본문)를 종합해 "'+query+'"에 대한 실전 리서치 리포트를 작성해.\n'
+        +'형식:\n[제목 한 줄]\n\n요약: 2~3문장 핵심\n\n## 주요 발견\n▪ 항목(각 한 줄, 가능하면 출처[1] 표기)\n\n## 상세\n소제목별 설명\n\n## 시사점 (1인 사업자 관점)\n실전 조언 2~3개\n'
+        +'규칙: 자료에 있는 사실만(추측·창작 금지), 숫자·고유명사 정확히, 출처 번호 표기, 한국어, 1200~1800자.';
+      callAI({ system:sys, messages:[{role:'user', content:'[주제] '+query+'\n\n[검색 결과]\n'+corpus+(deepTxt?('\n\n[상세 본문]\n'+deepTxt):'')}], maxTokens:2600 },
+        function(text){ onDone((text||'').trim(), res); }, onErr);
+    }
+    next();
   }, onErr);
 }
-function rpCopy(){ var o=document.get...   ← 이 줄은 그대로 남아있어야 함
 function rpCopy(){ var o=document.getElementById('rp-out'); if(!o) return; try{ navigator.clipboard.writeText(o.textContent||''); toast('복사됐어요'); }catch(e){ try{ toast('복사 실패 — 길게 눌러 복사하세요'); }catch(x){} } }
 function rpRun(){
   var q=(((document.getElementById('rp-q')||{}).value)||'').trim();
