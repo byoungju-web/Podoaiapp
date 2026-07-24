@@ -2350,6 +2350,56 @@ function researchPipeline(query, deep, onProgress, onDone, onErr){
     next();
   }, onErr);
 }
+/* ===== 🔀 MCP 병렬 융합 엔진 (읽기 소스만 · 실행류는 기존 라우팅 유지) =====
+   소스 추가/삭제 = 아래 MCP_SOURCES 배열만 편집. 각 소스는 test(q)로 매칭, run(q)->Promise<{text}|null>. */
+function _mcpProxy(){ try{ return (localStorage.getItem('connect_proxy')||'').trim(); }catch(e){ return ''; } }
+function _mcpPlaceOf(q){ q=String(q||''); var m=q.match(/([가-힣A-Za-z]{2,10})\s*(날씨|기온|온도|미세먼지|일기예보|weather)/); return m?m[1]:'서울'; }
+function _mcpFxPair(q){ q=String(q||'').toUpperCase(); var map=[['USD',/달러|USD/],['JPY',/엔|JPY/],['EUR',/유로|EUR/],['CNY',/위안|CNY/]]; var to='USD'; for(var i=0;i<map.length;i++){ if(map[i][1].test(q)){ to=map[i][0]; break; } } return { from:'KRW', to:to }; }
+var MCP_SOURCES=[
+  { id:'weather', name:'날씨',
+    test:function(q){ return /날씨|기온|미세먼지|우산|일기예보|몇\s*도|더워|추워|폭염|한파|weather/.test(q); },
+    run:function(q){
+      return new Promise(function(resolve){
+        var name=_mcpPlaceOf(q);
+        advFetch('https://geocoding-api.open-meteo.com/v1/search?count=1&language=ko&name='+encodeURIComponent(name), { method:'GET' }, _mcpProxy(), function(g){
+          var r0=(g&&g.results&&g.results[0]); if(!r0){ resolve(null); return; }
+          var place=(r0.name||name);
+          advFetch('https://api.open-meteo.com/v1/forecast?current=temperature_2m,relative_humidity_2m,precipitation,wind_speed_10m&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max&timezone=auto&forecast_days=2&latitude='+r0.latitude+'&longitude='+r0.longitude, { method:'GET' }, _mcpProxy(), function(w){
+            if(!w||!w.current){ resolve(null); return; }
+            var c=w.current, d=w.daily||{}, mx=d.temperature_2m_max||[], mn=d.temperature_2m_min||[], pp=d.precipitation_probability_max||[];
+            resolve({ text:'[날씨: '+place+']\n현재 '+c.temperature_2m+'°C, 습도 '+c.relative_humidity_2m+'%, 강수 '+c.precipitation+'mm, 바람 '+c.wind_speed_10m+'km/h.\n오늘 최고 '+mx[0]+'°C/최저 '+mn[0]+'°C, 강수확률 '+pp[0]+'%.\n내일 최고 '+mx[1]+'°C/최저 '+mn[1]+'°C, 강수확률 '+pp[1]+'%.' });
+          }, function(){ resolve(null); });
+        }, function(){ resolve(null); });
+      });
+    }
+  },
+  { id:'fx', name:'환율',
+    test:function(q){ return /환율|시세|달러|엔화|유로|위안|USD|JPY|EUR|CNY/.test(q); },
+    run:function(q){
+      return new Promise(function(resolve){
+        if(typeof fxGet!=='function'){ resolve(null); return; }
+        var pair=_mcpFxPair(q);
+        fxGet(pair.from, pair.to, function(v){ resolve({ text:'[환율] 1 '+pair.from+' = '+(Math.round(v*10000)/10000)+' '+pair.to+' (frankfurter·유럽중앙은행 기준).' }); }, function(){ resolve(null); });
+      });
+    }
+  }
+];
+function mcpFusionMatch(q){ q=String(q||''); for(var i=0;i<MCP_SOURCES.length;i++){ try{ if(MCP_SOURCES[i].test(q)) return true; }catch(e){} } return false; }
+function mcpFusion(query, onProgress, onDone, onErr){
+  var picked=[]; for(var i=0;i<MCP_SOURCES.length;i++){ try{ if(MCP_SOURCES[i].test(query)) picked.push(MCP_SOURCES[i]); }catch(e){} }
+  if(!picked.length){ if(onErr) onErr(new Error('NO_SOURCE')); return; }
+  if(onProgress) onProgress('🔀 '+picked.map(function(s){return s.name;}).join('·')+' 병렬 조회 중…');
+  var jobs=picked.map(function(s){ try{ return s.run(query); }catch(e){ return Promise.resolve(null); } });
+  Promise.all(jobs).then(function(list){
+    var facts=[]; for(var j=0;j<list.length;j++){ if(list[j]&&list[j].text) facts.push(list[j].text); }
+    if(!facts.length){ if(onErr) onErr(new Error('NO_DATA')); return; }
+    if(onProgress) onProgress('🤖 결과 융합 중…');
+    var sys='너는 한국어 도우미야. 아래 [실시간 데이터]만 근거로 사용자 질문에 자연스럽고 간결하게 답해. 데이터에 없는 값은 지어내지 마. 숫자·단위 정확히. 4문장 이내.';
+    callAI({ system:sys, messages:[{role:'user',content:'[질문] '+query+'\n\n[실시간 데이터]\n'+facts.join('\n\n')}], maxTokens:700, noLang:true },
+      function(txt){ onDone((txt||'').trim(), null); },
+      function(){ onDone(facts.join('\n\n'), null); });   /* 융합 AI 실패해도 원본 데이터는 보여줌 */
+  }, function(){ if(onErr) onErr(new Error('FETCH_FAIL')); });
+}
 function rpCopy(){ var o=document.getElementById('rp-out'); if(!o) return; try{ navigator.clipboard.writeText(o.textContent||''); toast('복사됐어요'); }catch(e){ try{ toast('복사 실패 — 길게 눌러 복사하세요'); }catch(x){} } }
 function rpRun(){
   var q=(((document.getElementById('rp-q')||{}).value)||'').trim();
@@ -7127,6 +7177,12 @@ function voiceAnswer(query){
     var nk=document.createElement('div'); nk.style.cssText='background:#eef0f7;border-radius:14px;padding:16px';
     try{ freeAiNotice(nk); }catch(e){ nk.textContent='무료로 쓰려면 마이 탭에서 무료 키 또는 Puter를 켜줘.'; }
     ai.appendChild(nk); return;
+  }
+  // 2.5) 🔀 MCP 병렬 융합: 매칭되는 읽기 소스가 있으면 먼저 (없으면 아래 기존 경로로 낙하)
+  if(typeof mcpFusion==='function' && typeof mcpFusionMatch==='function' && mcpFusionMatch(aiQ)){
+    vansSpin(ai, '🔀 실시간 데이터 병렬 조회 중…');
+    mcpFusion(aiQ, function(m){ vansSpin(ai, m); }, function(text){ vansRenderWeb({ answer:text, sources:[] }); }, function(){ vansPlainAI(aiQ, true); });
+    return;
   }
   // 3) 실시간 웹검색 키가 있으면: 웹 검색 → 근거 답변 / 없으면 일반 AI
   if(typeof hasWebSearch==='function' && hasWebSearch()){
