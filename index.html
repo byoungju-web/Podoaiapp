@@ -3868,7 +3868,7 @@ var COMPANION_PROMPT="너는 '포도', 사용자의 다정한 AI 친구야. 따�
 function setChatHeaderName(name,status){
   var n=document.getElementById('chatheader-name'); if(n) n.textContent=name;
   var s=document.getElementById('chatheader-status'); if(s) s.textContent=status;
-  var av=document.getElementById('chatheader-av'); if(av) av.textContent=(name===COMPANION_NAME?'🍇':'AI');
+  var av=document.getElementById('chatheader-av'); if(av){ if(name===COMPANION_NAME){ av.textContent=''; av.innerHTML='<img src="/icon-192.png" alt="포도야" style="width:100%;height:100%;object-fit:cover;border-radius:inherit;display:block">'; } else { av.innerHTML=''; av.textContent='AI'; } }
 }
 /* ===== 영어회화 연습 (채팅 페르소나) ===== */
 var ENGLISH_PROMPT="You are 'Leo', a friendly and patient English conversation partner for a Korean learner. Have a natural, encouraging English conversation. Use simple clear English (beginner-intermediate). Keep each reply short (2-3 sentences) and end with a question to keep the conversation going. If the user makes a notable mistake, add ONE short gentle correction in Korean at the very end like: (\uD83D\uDCA1 자연스러운 표현: ...). Never lecture.";
@@ -9920,7 +9920,7 @@ function makeLauncher(){
     var sep=document.createElement('div');
     sep.style.cssText='display:flex;align-items:center;gap:10px;padding:12px 14px 6px;';
     sep.innerHTML='<div style="flex:1;height:1px;background:rgba(0,0,0,.26)"></div>'
-      +'<span style="font-size:13px;font-weight:800;color:#8b35e0;letter-spacing:.5px">🍇 Podoya 기능 <span style="font-size:10px;color:#9aa0b4;font-weight:600">v4.94 🌍</span></span>'
+      +'<span style="font-size:13px;font-weight:800;color:#8b35e0;letter-spacing:.5px;display:inline-flex;align-items:center;gap:6px"><img src="/icon-192.png" alt="" style="width:18px;height:18px;border-radius:5px;vertical-align:-3px">Podoya 기능 <span style="font-size:10px;color:#9aa0b4;font-weight:600">v4.94 🌍</span></span>'
       +'<div style="flex:1;height:1px;background:rgba(0,0,0,.26)"></div>';
     d.appendChild(sep);
 
@@ -10003,7 +10003,7 @@ function makeShopPanel(){
 
 function makeStartCard(){
   var d=document.createElement('div'); d.className='scard'; d.id='startcard';
-  d.innerHTML='<div style="font-size:30px;text-align:center;margin-bottom:7px">🍇</div>'
+  d.innerHTML='<img src="/icon-192.png" alt="포도야" style="width:52px;height:52px;display:block;margin:0 auto 7px;border-radius:13px">'
     +'<div style="font-size:15px;font-weight:700;color:#141720;text-align:center;margin-bottom:4px">Podoya</div>'
     +'<div style="font-size:11px;color:#1f2430;text-align:center;line-height:1.6;margin-bottom:14px">AI가 도와주는 스마트 런처<br>런처 무료 · AI 채팅은 API 키 필요</div>'
     +'<button class="scta" onclick="openUp()">🍇 AI 채팅 이용하기</button>'
@@ -13398,7 +13398,7 @@ function renderUp(){
   var inner=document.getElementById('upin');
   if(upStep==='intro'){
     inner.innerHTML='<div style="text-align:center;padding:22px 0 18px">'
-      +'<div style="font-size:50px;margin-bottom:10px">🍇</div>'
+      +'<img src="/icon-192.png" alt="포도야" style="width:78px;height:78px;display:block;margin:0 auto 10px;border-radius:18px">'
       +'<div style="font-size:20px;font-weight:700;color:#141720;margin-bottom:5px">Podoya</div>'
       +'<div style="font-size:11px;color:#1f2430;margin-bottom:20px">내 폰이 서버 · 완전한 개인정보 보호</div>'
       +'</div>'
