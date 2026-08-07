@@ -769,6 +769,39 @@ body{background:#f4f5fa;display:flex;justify-content:center;min-height:100vh;fon
       </div>
     </div>
 
+    <!-- 데이터 백업 -->
+    <div style="font-size:12px;font-weight:800;color:#1f2430;letter-spacing:1px;padding:8px 4px 6px">&#128190; 데이터 백업</div>
+    <div class="my-card">
+      <div style="padding:12px 13px 0;font-size:12.5px;color:#374151;font-weight:700;line-height:1.6" id="pdBkHead">저장 현황을 확인하는 중…</div>
+      <div style="padding:2px 13px 10px;font-size:11px;color:#6b7280;word-break:break-all" id="pdBkHere"></div>
+      <div class="my-row" onclick="pdBkExport()">
+        <div class="my-row-ic" style="background:rgba(34,197,94,.16)">&#11015;&#65039;</div>
+        <div>
+          <div class="my-row-txt">백업 파일로 내보내기</div>
+          <div style="font-size:13.5px;color:#141720;margin-top:3px">저장된 내용을 파일 하나로 내려받습니다</div>
+        </div>
+        <div class="my-row-ar">&#8250;</div>
+      </div>
+      <div class="my-row" onclick="pdBkImport('fill')">
+        <div class="my-row-ic" style="background:rgba(99,102,241,.16)">&#11014;&#65039;</div>
+        <div>
+          <div class="my-row-txt">불러오기 (빈 것만 채우기)</div>
+          <div style="font-size:13.5px;color:#141720;margin-top:3px">지금 없는 항목만 채웁니다 · 안전</div>
+        </div>
+        <div class="my-row-ar">&#8250;</div>
+      </div>
+      <div class="my-row" onclick="pdBkImport('over')">
+        <div class="my-row-ic" style="background:rgba(239,68,68,.14)">&#9851;&#65039;</div>
+        <div>
+          <div class="my-row-txt">불러오기 (덮어쓰기)</div>
+          <div style="font-size:13.5px;color:#141720;margin-top:3px">새 주소로 이사할 때 씁니다</div>
+        </div>
+        <div class="my-row-ar">&#8250;</div>
+      </div>
+      <div style="margin:10px 13px 13px;padding:11px 12px;border-radius:11px;background:#FFFBEB;border:1px solid #FDE68A;color:#92400E;font-size:11.5px;font-weight:700;line-height:1.65" id="pdBkWarn"></div>
+      <div id="pdBkMsg" style="padding:0 13px 13px;font-size:12px;font-weight:800;line-height:1.6;min-height:16px"></div>
+    </div>
+
     <!-- 언어·국가 설정 -->
     <div style="font-size:12px;font-weight:800;color:#1f2430;letter-spacing:1px;padding:8px 4px 6px">&#127757; 언어 · 국가 설정</div>
     <div class="my-card" style="padding:14px">
@@ -14812,23 +14845,30 @@ init();
     return d;
   }
 
-  // 화면 오른쪽 아래에 항상 떠 있는 단추 — 자리를 찾을 필요가 없습니다
+  // 마이 탭 · 런처 설정 아래 항목에 연결합니다 (떠 있는 단추 없음)
   function build(){
-    if(document.getElementById('pdBkFab')) return true;
-    if(!document.body) return false;
-
-    var fab = document.createElement('button');
-    fab.id = 'pdBkFab';
-    fab.textContent = '\uD83D\uDCBE';
-    fab.title = '데이터 백업';
-    fab.style.cssText = 'position:fixed;right:14px;bottom:96px;z-index:99999;' +
-      'width:52px;height:52px;border-radius:50%;border:0;cursor:pointer;' +
-      'background:#22c55e;color:#fff;font-size:23px;line-height:1;' +
-      'box-shadow:0 6px 18px rgba(0,0,0,.28)';
-    fab.onclick = openPanel;
-    document.body.appendChild(fab);
+    var head = document.getElementById('pdBkHead');
+    if(!head) return false;
+    var data = all();
+    head.textContent = '이 기기에 ' + Object.keys(data).length + '개 · ' + human(bytes(data)) + ' 저장됨';
+    var here = document.getElementById('pdBkHere');
+    if(here) here.textContent = '현재 주소: ' + location.origin;
+    var warn = document.getElementById('pdBkWarn');
+    if(warn){
+      var sc = secretCount(data);
+      warn.textContent = '백업 파일에는 API 키와 접속 토큰' + (sc ? ' ' + sc + '개' : '') +
+        '가 그대로 들어갑니다. 남에게 보내지 마세요. 저장 기록은 이 주소에만 있어서, ' +
+        '주소가 바뀌면 새 기기처럼 비어 보입니다.';
+    }
     return true;
   }
+
+  // 마이 탭 항목이 부르는 함수
+  window.pdBkExport = function(){ try{ build(); }catch(e){} doExport(); };
+  window.pdBkImport = function(mode){ pick(mode); };
+
+  // 마이 탭을 열 때마다 저장 현황을 새로 셉니다
+  document.addEventListener('click', function(){ setTimeout(function(){ try{ build(); }catch(e){} }, 120); }, true);
 
   function openPanel(){
     var old = document.getElementById('pdBkWrap');
