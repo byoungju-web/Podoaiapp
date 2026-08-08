@@ -10,6 +10,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="포도야">
 <title>Podoya 🍇</title>
+<!-- build: stt-rec-2 -->
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{overflow-x:hidden;max-width:100vw}
@@ -4660,12 +4661,16 @@ var REC_MODELS=['gemini-2.5-flash','gemini-2.5-flash-lite','gemini-2.0-flash','g
 function _recShort(m){ m=String(m||''); return m.length>60 ? m.slice(0,60)+'…' : m; }
 function _recSend(blob){
   var mb=document.getElementById(window._stt.mic);
-  if(!blob || blob.size<2000){ sttResetMic(); window._sttAutoRun=null; showToast('잘 안 들렸어요. 다시 말해주세요.','rgba(0,0,0,.85)'); return; }
+  if(!blob || blob.size<2000){ sttResetMic(); window._sttAutoRun=null; showToast('🎤 잘 안 들렸어요. 다시 말해주세요','rgba(0,0,0,.85)'); return; }
   if(mb) mb.innerHTML='&#9203; 옮기는 중…';
-  var fail=function(m){ sttResetMic(); window._sttAutoRun=null; showToast(_recShort(m||'음성을 옮기지 못했어요'),'rgba(0,0,0,.85)'); };
+  var fail=function(m){ sttResetMic(); window._sttAutoRun=null; showToast('🎤 '+_recShort(m||'음성을 옮기지 못했어요'),'rgba(0,0,0,.85)'); };
   var giveUp=function(){
-    _recOff=true; sttResetMic(); window._sttAutoRun=null;
-    showToast('Gemini 받아쓰기 할당량이 없어요 · 음성인식으로 바꿀게요','rgba(0,0,0,.85)');
+    /* Gemini 받아쓰기가 막혔다 → 이번 세션은 예전 음성인식으로 돌리고, 바로 다시 듣는다 */
+    _recOff=true;
+    var run=window._sttAutoRun; window._sttAutoRun=null; sttResetMic();
+    showToast('🎤 받아쓰기가 막혔어요 · 다시 말해주세요','rgba(0,0,0,.85)');
+    var t=window._stt.target, m=window._stt.mic, idl=window._stt.idle, lis=window._stt.listen||idl;
+    setTimeout(function(){ try{ sttStart(t, m, idl, lis, run); }catch(e){} }, 900);
   };
   var fr=new FileReader();
   fr.onerror=function(){ fail(); };
@@ -4689,7 +4694,7 @@ function _recSend(blob){
             var m=String(d.error.message||'');
             /* 할당량·없는 모델·미지원이면 다음 모델로 */
             if(/quota|limit|not found|not supported|unsupported|RESOURCE_EXHAUSTED/i.test(m)){ tryModel(i+1); return; }
-            fail('받아쓰기 실패: '+m); return;
+            fail(m); return;
           }
           var t='';
           try{ t=(d.candidates[0].content.parts||[]).map(function(p){ return p.text||''; }).join(''); }catch(e){}
@@ -4710,6 +4715,7 @@ function _recStart(targetId, micId, idleHtml, listeningHtml){
   var mb=document.getElementById(micId);
   var go=function(stream){
     _rec.stream=stream; _rec.active=true; _rec.cancel=false; window._stt.listening=true;
+    window._stt.listen=listeningHtml;
     if(mb) mb.innerHTML=listeningHtml;
     try{
       var AC=window.AudioContext||window.webkitAudioContext;
