@@ -10,7 +10,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="포도야">
 <title>Podoya 🍇</title>
-<!-- build: stt-rec-3 -->
+<!-- build: stt-revert -->
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{overflow-x:hidden;max-width:100vw}
@@ -4797,8 +4797,6 @@ function sttStart(targetId, micId, idleHtml, listeningHtml, autoRunFn){
     catch(e){ sttResetMic(); showToast('음성 입력을 시작할 수 없어요.','rgba(0,0,0,.85)'); }
     return;
   }
-  /* 🔇 Gemini 키가 있으면 녹음 방식 — 시스템 음성인식을 안 부르니 "띡" 소리가 없다 */
-  if(_recAvail()){ _recStart(targetId, micId, idleHtml, listeningHtml); return; }
   var SR=window.SpeechRecognition||window.webkitSpeechRecognition;
   if(!SR){ showToast('이 기기는 음성 입력을 지원하지 않아요. 글로 적어 주세요.','rgba(0,0,0,.85)'); return; }
   // 단일 연속 세션 + 1초 침묵 자동 종료: 인식기를 재시작하지 않으므로 "띠릭 띠릭" 반복 비프음이 없고, 말 멈추면 1초 뒤 바로 실행.
@@ -4814,16 +4812,9 @@ function sttStart(targetId, micId, idleHtml, listeningHtml, autoRunFn){
     var txt=((r && r[0] && r[0].transcript) || '').replace(/\s+/g,' ').trim();
     if(txt){ _spoke=true; _last=Date.now(); if(elT) elT.value=txt; }
   };
-  sr.onerror=function(ev){
-    if(ev && (ev.error==='not-allowed'||ev.error==='service-not-allowed')){ _sttAborted=true; try{sr.stop();}catch(e){} }
-    /* 이 기기는 마이크를 동시에 못 잡는다 → 다음부터는 소리 죽이기를 끄고 예전 방식으로 */
-    if(ev && ev.error==='audio-capture' && _sttMicStream){
-      _sttNoPrime=true; try{ localStorage.setItem('podoai_stt_noprime','1'); }catch(e){}
-      _sttReleaseMic();
-    }
-  };
+  sr.onerror=function(ev){ if(ev && (ev.error==='not-allowed'||ev.error==='service-not-allowed')){ _sttAborted=true; try{sr.stop();}catch(e){} } };
   sr.onend=function(){
-    _sttClearTimers(); _webSR=null; _sttReleaseMic(); sttResetMic();
+    _sttClearTimers(); _webSR=null; sttResetMic();
     var val=elT?(elT.value||'').replace(/\s+/g,' ').trim():'';
     if(!_sttAborted && window._sttAutoRun && val){ var fn=window._sttAutoRun; window._sttAutoRun=null; setTimeout(fn,STT_AUTORUN_MS); }
     else { window._sttAutoRun=null; }
@@ -4835,14 +4826,10 @@ function sttStart(targetId, micId, idleHtml, listeningHtml, autoRunFn){
   }, 150);
   // 전체 최대 듣기 시간 안전 종료
   _sttMaxTimer=setTimeout(function(){ _done=true; try{ sr.stop(); }catch(e){} }, CHAIN_MAX_MS);
-  _sttPrimeMic(function(){
-    try{ sr.start(); }catch(e){ _sttClearTimers(); _sttReleaseMic(); sttResetMic(); showToast('음성 입력을 시작할 수 없어요.','rgba(0,0,0,.85)'); }
-  });
+  try{ sr.start(); }catch(e){ _sttClearTimers(); sttResetMic(); showToast('음성 입력을 시작할 수 없어요.','rgba(0,0,0,.85)'); }
 }
 function sttStop(){
   _sttClearTimers(); _sttAborted=true;
-  _sttReleaseMic();
-  try{ _recAbort(); }catch(e){}
   try{ if(window.Android && window.Android.stopListening) window.Android.stopListening(); }catch(e){}
   if(_webSR){ try{_webSR.stop();}catch(e){} _webSR=null; }
   window._sttAutoRun=null;
@@ -13398,14 +13385,13 @@ function doHomeMic(){
   if(!SR){alert('Chrome/Edge를 사용해 주세요.'); return;}
   if(micOn){if(srObj)srObj.stop(); return;}
   navigator.mediaDevices.getUserMedia({audio:true}).then(function(st){
-    /* 🔇 마이크를 잡은 채로 인식을 시작해야 시작·종료 "띡" 소리가 안 난다 (끝난 뒤에 놓아준다) */
-    var _rel=function(){ setTimeout(function(){ try{ st.getTracks().forEach(function(t){t.stop();}); }catch(e){} }, 700); };
+    st.getTracks().forEach(function(t){t.stop();});
     var sr=new SR(); sr.lang=appLangTag(); sr.interimResults=false;
     var mb=document.getElementById('homemicbtn');
     sr.onstart=function(){micOn=true; if(mb){mb.classList.add('rec');mb.textContent='🔴';}};
     sr.onresult=function(e){var t=e.results[0][0].transcript; homeinp.value=t; homeinp.dispatchEvent(new Event('input')); homeinp.focus();};
-    sr.onerror=function(){micOn=false; _rel(); if(mb){mb.classList.remove('rec');mb.textContent='🎤';}};
-    sr.onend=function(){micOn=false; _rel(); if(mb){mb.classList.remove('rec');mb.textContent='🎤';}};
+    sr.onerror=function(){micOn=false; if(mb){mb.classList.remove('rec');mb.textContent='🎤';}};
+    sr.onend=function(){micOn=false; if(mb){mb.classList.remove('rec');mb.textContent='🎤';}};
     sr.start(); srObj=sr;
   }).catch(function(){alert('마이크 권한을 허용해 주세요.');});
 }
@@ -13500,8 +13486,7 @@ function doMic(){
   if(!SR){alert('Chrome/Edge를 사용해 주세요.'); return;}
   if(micOn){if(srObj)srObj.stop(); return;}
   navigator.mediaDevices.getUserMedia({audio:true}).then(function(st){
-    /* 🔇 마이크를 잡은 채로 인식을 시작해야 시작·종료 "띡" 소리가 안 난다 (끝난 뒤에 놓아준다) */
-    var _rel=function(){ setTimeout(function(){ try{ st.getTracks().forEach(function(t){t.stop();}); }catch(e){} }, 700); };
+    st.getTracks().forEach(function(t){t.stop();});
     var sr=new SR(); sr.lang=appLangTag(); sr.interimResults=false;
     var mb=document.getElementById('chatmicbtn');
     sr.onstart=function(){micOn=true; if(mb){mb.classList.add('rec'); mb.textContent='🔴';}};
@@ -13509,8 +13494,8 @@ function doMic(){
       var t=e.results[0][0].transcript;
       inp.value=t; inp.dispatchEvent(new Event('input')); inp.focus();
     };
-    sr.onerror=function(){micOn=false; _rel(); if(mb){mb.classList.remove('rec'); mb.textContent='🎤';}};
-    sr.onend=function(){micOn=false; _rel(); if(mb){mb.classList.remove('rec'); mb.textContent='🎤';}};
+    sr.onerror=function(){micOn=false; if(mb){mb.classList.remove('rec'); mb.textContent='🎤';}};
+    sr.onend=function(){micOn=false; if(mb){mb.classList.remove('rec'); mb.textContent='🎤';}};
     sr.start(); srObj=sr;
   }).catch(function(){alert('마이크 권한을 허용해 주세요.');});
 }
