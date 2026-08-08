@@ -14962,6 +14962,366 @@ init();
 })();
 </script>
 <!-- ============ 데이터 백업 블록 끝 ============ -->
+<!-- ============ 포도야 · 구글 로그인 & 자동 동기화 ============
+     index.html 맨 아래, 닫는 body 태그 바로 위에 붙이세요.
+     기존 코드는 건드리지 않습니다. 지우면 원래대로 돌아갑니다.
 
+     ⚠️ 아래 CLIENT_ID 를 사장님 값으로 바꾸셔야 로그인이 됩니다.
+========================================================= -->
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<script>
+(function(){
+
+  /* ═══════════ 여기만 고치면 됩니다 ═══════════ */
+  var CLIENT_ID = '1007117932498-2cea0161fftm4ed4ndp5tbkv3899kgpm.apps.googleusercontent.com';
+  var API = 'https://podoya-sync.hasin7jk.workers.dev';
+  /* ══════════════════════════════════════════ */
+
+  var SESS = 'podoya_sync_sess';     // 우리 서버가 준 열쇠 (이 항목은 서버로 안 보냅니다)
+  var MARK = 'podoya_sync_mark';     // 마지막으로 올린 내용의 지문
+  var LAST = 'podoya_sync_last';     // 마지막으로 올린 시각
+
+  /* 서버로 보내지 않는 항목 — 워커와 같은 규칙 (2중 방어) */
+  var DENY_RE = /(^|_)(k|gk)$|key$|_key|token|secret|passwd|password|vault|credential|apikey|_sub$|proxy|composio_uid|client_secret/i;
+  var DENY_SET = {
+    'podoai_k':1,'podoai_gk':1,'podoai_vault':1,'podoai_vault_dk':1,
+    'podoai_push_sub':1,'podoai_proxy':1,'podoai_tg_token':1,
+    'podoai_gcal_token':1,'podoai_kcal_token':1,'podoai_kcal_app_key':1,
+    'adv_exa_key':1,'adv_firecrawl_key':1,'adv_exa_proxy':1,'adv_firecrawl_proxy':1,
+    'composio_key':1,'composio_uid':1,'connect_proxy':1,
+    'kakao_me_token':1,'smartthings_token':1,
+    'podoya_sync_sess':1,'podoya_sync_mark':1,'podoya_sync_last':1
+  };
+  var ALLOW_SET = { 'podoai_gcal_client_id':1 };
+  function isSecret(k){
+    if(ALLOW_SET[k]) return false;
+    if(DENY_SET[k]) return true;
+    return DENY_RE.test(k);
+  }
+
+  /* ---------- 작은 도우미 ---------- */
+  function sess(){ try{ return localStorage.getItem(SESS) || ''; }catch(e){ return ''; } }
+  function human(n){
+    if(n < 1024) return n + ' B';
+    if(n < 1048576) return (n/1024).toFixed(1) + ' KB';
+    return (n/1048576).toFixed(2) + ' MB';
+  }
+  function hhmm(ts){
+    if(!ts) return '';
+    var d = new Date(Number(ts));
+    return (d.getMonth()+1) + '/' + d.getDate() + ' ' +
+      String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
+  }
+
+  // 서버로 보낼 것만 골라 담는다
+  function pickSyncable(){
+    var o = {}, secrets = 0, k, v;
+    for(var i=0;i<localStorage.length;i++){
+      k = localStorage.key(i);
+      if(k === null) continue;
+      if(isSecret(k)){ secrets++; continue; }
+      try{ v = localStorage.getItem(k); }catch(e){ continue; }
+      if(typeof v === 'string') o[k] = v;
+    }
+    return { data:o, secrets:secrets };
+  }
+
+  // 내용이 바뀌었는지 싸게 확인하는 지문
+  function fingerprint(o){
+    var ks = Object.keys(o).sort(), n = 0, s = 0;
+    for(var i=0;i<ks.length;i++){ n++; s += ks[i].length + o[ks[i]].length; }
+    return n + ':' + s;
+  }
+
+  async function api(path, opts){
+    opts = opts || {};
+    var h = { 'Content-Type':'application/json' };
+    var t = sess();
+    if(t) h['Authorization'] = 'Bearer ' + t;
+    var r = await fetch(API + path, {
+      method: opts.method || 'GET',
+      headers: h,
+      body: opts.body ? JSON.stringify(opts.body) : undefined
+    });
+    var d = null;
+    try{ d = await r.json(); }catch(e){}
+    return { ok: r.ok, status: r.status, data: d || {} };
+  }
+
+  /* ---------- 상태 ---------- */
+  var me = null;          // { email, name }
+  var busy = false;
+  var timer = null;
+
+  function say(text, color){
+    var el = document.getElementById('pdSyMsg');
+    if(!el) return;
+    el.textContent = text || '';
+    el.style.color = color || '#4b5563';
+  }
+
+  /* ---------- 올리기 ---------- */
+  async function push(quiet){
+    if(!sess() || busy) return;
+    var p = pickSyncable();
+    var fp = fingerprint(p.data);
+    var last = '';
+    try{ last = localStorage.getItem(MARK) || ''; }catch(e){}
+    if(quiet && fp === last) return;      // 바뀐 게 없으면 그냥 넘어간다
+
+    busy = true;
+    if(!quiet) say('올리는 중…');
+    try{
+      var r = await api('/api/sync/push', {
+        method:'POST',
+        body: { data: p.data, origin: location.origin }
+      });
+      if(r.ok && r.data.ok){
+        try{
+          localStorage.setItem(MARK, fp);
+          localStorage.setItem(LAST, String(Date.now()));
+        }catch(e){}
+        say('보관 완료 · ' + r.data['저장'] + '개 · ' + human(r.data['크기']) +
+            (r.data['거른항목'] ? ' · 키 ' + r.data['거른항목'] + '개는 안 올렸습니다' : ''), '#15803d');
+      }else if(r.status === 401){
+        me = null; say('로그인이 풀렸습니다. 다시 로그인해 주세요.', '#b91c1c');
+      }else{
+        say(r.data.error || '올리지 못했습니다.', '#b91c1c');
+      }
+    }catch(e){ say('연결하지 못했습니다.', '#b91c1c'); }
+    busy = false;
+    render();
+  }
+
+  /* ---------- 내려받기 ---------- */
+  async function pull(){
+    if(!sess() || busy) return;
+    busy = true; say('내려받는 중…');
+    try{
+      var r = await api('/api/sync/pull');
+      if(!r.ok){ say(r.data.error || '내려받지 못했습니다.', '#b91c1c'); busy=false; return; }
+      if(r.data.empty){ say('서버에 보관된 내용이 없습니다.', '#6b7280'); busy=false; return; }
+
+      var d = r.data.data || {};
+      var n = Object.keys(d).length;
+      var when = r.data.at ? hhmm(r.data.at) : '';
+      if(!confirm('서버에 보관된 ' + n + '개를 이 기기로 가져옵니다.\n' +
+                  (when ? '보관 시각: ' + when + '\n' : '') +
+                  '\n같은 이름이 있으면 서버 내용으로 덮어씁니다.\n' +
+                  'API 키는 서버에 없으니 그대로 남습니다.\n\n계속할까요?')){
+        say('취소했습니다.', '#6b7280'); busy=false; return;
+      }
+
+      var ok = 0, fail = 0;
+      for(var k in d){
+        if(!Object.prototype.hasOwnProperty.call(d,k)) continue;
+        if(isSecret(k)) continue;                 // 혹시 섞여 있어도 키는 손대지 않는다
+        try{ localStorage.setItem(k, d[k]); ok++; }catch(e){ fail++; }
+      }
+      try{ localStorage.setItem(MARK, fingerprint(pickSyncable().data)); }catch(e){}
+      say('복원 ' + ok + '개' + (fail ? ' · 실패 ' + fail : '') + ' · 3초 뒤 새로고침', '#15803d');
+      setTimeout(function(){ location.reload(); }, 3000);
+    }catch(e){ say('연결하지 못했습니다.', '#b91c1c'); }
+    busy = false;
+  }
+
+  /* ---------- 로그인 ---------- */
+  window.pdSyLogin = async function(resp){
+    if(!resp || !resp.credential) return;
+    say('로그인 중…');
+    try{
+      var r = await fetch(API + '/api/auth/google', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ idToken: resp.credential })
+      });
+      var d = await r.json();
+      if(!r.ok || !d.ok){ say(d.error || '로그인에 실패했습니다.', '#b91c1c'); return; }
+      try{ localStorage.setItem(SESS, d.session); }catch(e){}
+      me = { email: d.email, name: d.name };
+      say('로그인했습니다 · ' + (d.email || ''), '#15803d');
+      render();
+      // 서버에 이미 보관된 게 있으면 물어본다
+      var p = await api('/api/sync/pull');
+      if(p.ok && p.data.ok && !p.data.empty) pull();
+      else push();
+    }catch(e){ say('연결하지 못했습니다.', '#b91c1c'); }
+  };
+
+  window.pdSyLogout = async function(){
+    if(!confirm('이 기기에서 로그아웃합니다.\n서버에 보관된 내용은 지워지지 않습니다.')) return;
+    try{ await api('/api/auth/logout', { method:'POST' }); }catch(e){}
+    try{ localStorage.removeItem(SESS); localStorage.removeItem(MARK); }catch(e){}
+    me = null; say('로그아웃했습니다.', '#6b7280'); render();
+  };
+
+  window.pdSyPush = function(){ push(false); };
+  window.pdSyPull = function(){ pull(); };
+
+  window.pdSyForget = async function(){
+    if(!confirm('서버에 보관된 내용을 지웁니다.\n이 기기의 기록은 그대로 남습니다.\n\n계속할까요?')) return;
+    var r = await api('/api/sync/delete', { method:'POST' });
+    say(r.ok ? '서버에서 지웠습니다.' : '지우지 못했습니다.', r.ok ? '#15803d' : '#b91c1c');
+  };
+
+  /* ---------- 화면 ---------- */
+  function row(icon, bg, title, sub, fn){
+    var d = document.createElement('div');
+    d.className = 'my-row';
+    d.onclick = fn;
+    var ic = document.createElement('div');
+    ic.className = 'my-row-ic';
+    ic.style.background = bg;
+    ic.textContent = icon;
+    var mid = document.createElement('div');
+    mid.style.flex = '1';
+    var t1 = document.createElement('div');
+    t1.className = 'my-row-txt'; t1.textContent = title;
+    var t2 = document.createElement('div');
+    t2.style.cssText = 'font-size:13.5px;color:#141720;margin-top:3px';
+    t2.textContent = sub;
+    mid.appendChild(t1); mid.appendChild(t2);
+    var ar = document.createElement('div');
+    ar.className = 'my-row-ar'; ar.textContent = '\u203A';
+    d.appendChild(ic); d.appendChild(mid); d.appendChild(ar);
+    return d;
+  }
+
+  function render(){
+    var box = document.getElementById('pdSyBody');
+    if(!box) return;
+    box.innerHTML = '';
+
+    var p = pickSyncable();
+    var n = Object.keys(p.data).length;
+    var lastAt = '';
+    try{ lastAt = localStorage.getItem(LAST) || ''; }catch(e){}
+
+    if(!sess()){
+      var t = document.createElement('div');
+      t.style.cssText = 'padding:12px 13px;font-size:13px;color:#374151;font-weight:700;line-height:1.7';
+      t.innerHTML = '구글 계정으로 로그인하면 가계부 · 거래처 · 명함이 안전하게 보관됩니다.<br>' +
+        '폰을 바꿔도 로그인 한 번이면 돌아옵니다.';
+      box.appendChild(t);
+
+      var g = document.createElement('div');
+      g.id = 'pdSyBtn';
+      g.style.cssText = 'padding:4px 13px 14px;display:flex;justify-content:center';
+      box.appendChild(g);
+      drawGoogle();
+    }else{
+      var info = document.createElement('div');
+      info.style.cssText = 'padding:12px 13px 4px;font-size:12.5px;color:#374151;font-weight:700;line-height:1.7';
+      info.textContent = (me && me.email ? me.email + ' · ' : '') +
+        '보관 대상 ' + n + '개' + (lastAt ? ' · 마지막 ' + hhmm(lastAt) : ' · 아직 안 올림');
+      box.appendChild(info);
+
+      box.appendChild(row('\u2601\uFE0F', 'rgba(34,197,94,.16)', '지금 올리기',
+        '이 기기 내용을 서버에 보관합니다', window.pdSyPush));
+      box.appendChild(row('\u2B07\uFE0F', 'rgba(99,102,241,.16)', '서버에서 가져오기',
+        '새 폰에서 쓰거나 되돌릴 때', window.pdSyPull));
+      box.appendChild(row('\uD83D\uDEAA', 'rgba(107,114,128,.16)', '로그아웃',
+        '이 기기에서만 나갑니다', window.pdSyLogout));
+      box.appendChild(row('\uD83D\uDDD1\uFE0F', 'rgba(239,68,68,.14)', '서버 보관분 지우기',
+        '이 기기 기록은 그대로 둡니다', window.pdSyForget));
+    }
+
+    var warn = document.createElement('div');
+    warn.style.cssText = 'margin:10px 13px 13px;padding:11px 12px;border-radius:11px;' +
+      'background:#F0FDF4;border:1px solid #BBF7D0;color:#15803D;' +
+      'font-size:11.5px;font-weight:700;line-height:1.65';
+    warn.textContent = 'API 키와 접속 토큰 ' + p.secrets + '개는 서버로 보내지 않습니다. ' +
+      '폰을 바꾸면 키만 다시 넣으시면 됩니다.';
+    box.appendChild(warn);
+
+    var m = document.createElement('div');
+    m.id = 'pdSyMsg';
+    m.style.cssText = 'padding:0 13px 13px;font-size:12px;font-weight:800;line-height:1.6;min-height:16px';
+    box.appendChild(m);
+  }
+
+  function drawGoogle(){
+    var host = document.getElementById('pdSyBtn');
+    if(!host || !window.google || !google.accounts || !google.accounts.id) return;
+    if(CLIENT_ID.indexOf('googleusercontent.com') < 0){
+      host.innerHTML = '<div style="font-size:12px;color:#b91c1c;font-weight:800">' +
+        '클라이언트 ID를 아직 넣지 않았습니다.</div>';
+      return;
+    }
+    try{
+      google.accounts.id.initialize({ client_id: CLIENT_ID, callback: window.pdSyLogin });
+      google.accounts.id.renderButton(host, {
+        theme:'outline', size:'large', shape:'pill', text:'signin_with', locale:'ko'
+      });
+    }catch(e){}
+  }
+
+  /* ---------- 마이 탭에 자리 만들기 ---------- */
+  function build(){
+    if(document.getElementById('pdSyCard')) return true;
+
+    // 데이터 백업 카드 뒤 → 없으면 런처 설정 카드 뒤
+    var anchor = null, divs = document.querySelectorAll('div');
+    for(var i=0;i<divs.length;i++){
+      var tx = (divs[i].children.length === 0 ? divs[i].textContent : '') || '';
+      if(tx.indexOf('데이터 백업') >= 0){ anchor = divs[i]; }
+      else if(!anchor && tx.indexOf('런처 설정') >= 0){ anchor = divs[i]; }
+    }
+    if(!anchor) return false;
+    var card = anchor.nextElementSibling;
+    if(!card) return false;
+
+    var lab = document.createElement('div');
+    lab.style.cssText = 'font-size:12px;font-weight:800;color:#1f2430;letter-spacing:1px;padding:8px 4px 6px';
+    lab.textContent = '\u2601\uFE0F 계정 · 안전 보관';
+
+    var box = document.createElement('div');
+    box.id = 'pdSyCard';
+    box.className = 'my-card';
+    var body = document.createElement('div');
+    body.id = 'pdSyBody';
+    box.appendChild(body);
+
+    card.parentNode.insertBefore(lab, card.nextSibling);
+    lab.parentNode.insertBefore(box, lab.nextSibling);
+
+    render();
+    return true;
+  }
+
+  /* ---------- 저절로 올리기 ----------
+     20초마다 내용이 바뀌었는지만 싸게 확인하고, 바뀌었으면 올린다.
+     사용자는 아무것도 누르지 않는다.                              */
+  function watch(){
+    clearInterval(timer);
+    timer = setInterval(function(){
+      if(!sess() || busy) return;
+      push(true);
+    }, 20000);
+  }
+
+  async function boot(){
+    if(!build()){
+      var n = 0, iv = setInterval(function(){ if(build() || ++n > 60) clearInterval(iv); }, 250);
+    }
+    if(sess()){
+      var r = await api('/api/auth/me');
+      if(r.ok && r.data.ok){ me = { email:r.data.email, name:r.data.name }; }
+      else { try{ localStorage.removeItem(SESS); }catch(e){} }
+      render();
+      push(true);          // 들어올 때 한 번 맞춰둔다
+    }
+    watch();
+    // 구글 스크립트가 늦게 오면 단추를 그때 그린다
+    var g = 0, gi = setInterval(function(){
+      if(window.google && google.accounts && google.accounts.id){ clearInterval(gi); drawGoogle(); }
+      else if(++g > 40) clearInterval(gi);
+    }, 250);
+  }
+
+  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
+  else boot();
+})();
+</script>
+<!-- ============ 구글 로그인 & 동기화 블록 끝 ============ -->
 </body>
 </html>
