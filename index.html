@@ -10,7 +10,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="포도야">
 <title>Podoya 🍇</title>
-<!-- build: stt-rec-2 -->
+<!-- build: stt-rec-3 -->
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{overflow-x:hidden;max-width:100vw}
@@ -4657,18 +4657,45 @@ function _wavFrom(ab, cb, err){
   }catch(e){ done(); err(e); }
 }
 /* 받아쓰기용 모델 — 한 모델이 할당량 0이면 다음 것으로 넘어간다 (채팅 쪽과 같은 방식) */
-var REC_MODELS=['gemini-2.5-flash','gemini-2.5-flash-lite','gemini-2.0-flash','gemini-2.0-flash-lite','gemini-1.5-flash-8b','gemini-1.5-flash'];
+/* 모델 이름을 박아두면 구글이 없앨 때마다 고장난다.
+   키로 "지금 쓸 수 있는 모델"을 직접 물어보고 그중에서 고른다. */
+var REC_MODELS=['gemini-2.0-flash','gemini-flash-latest','gemini-1.5-flash'];   /* 목록 조회 실패 시 예비 */
+var _recModelList=null;
+function _recGetModels(cb){
+  if(_recModelList && _recModelList.length){ cb(_recModelList); return; }
+  var done=false;
+  var fin=function(list){ if(done) return; done=true; _recModelList=list; cb(list); };
+  setTimeout(function(){ fin(REC_MODELS); }, 6000);
+  fetch('https://generativelanguage.googleapis.com/v1beta/models?key='+encodeURIComponent(geminiKey))
+    .then(function(r){ return r.json(); }).then(function(d){
+      var out=[];
+      (d && d.models ? d.models : []).forEach(function(m){
+        var n=String(m.name||'').replace(/^models\//,'');
+        var ok=(m.supportedGenerationMethods||[]).indexOf('generateContent')>=0;
+        if(!ok || !n) return;
+        if(/embedding|aqa|imagen|veo|tts|image-generation/i.test(n)) return;   /* 소리를 못 듣는 것들 */
+        out.push(n);
+      });
+      if(!out.length){ fin(REC_MODELS); return; }
+      /* flash 먼저(빠르고 쌈), lite 다음, pro 마지막 */
+      out.sort(function(a,b){
+        var sc=function(n){ var s=0; if(/flash/i.test(n)) s-=4; if(/lite/i.test(n)) s+=1; if(/pro/i.test(n)) s+=3; if(/preview|exp/i.test(n)) s+=2; return s; };
+        return sc(a)-sc(b);
+      });
+      fin(out.slice(0,8));
+    })['catch'](function(){ fin(REC_MODELS); });
+}
 function _recShort(m){ m=String(m||''); return m.length>60 ? m.slice(0,60)+'…' : m; }
 function _recSend(blob){
   var mb=document.getElementById(window._stt.mic);
   if(!blob || blob.size<2000){ sttResetMic(); window._sttAutoRun=null; showToast('🎤 잘 안 들렸어요. 다시 말해주세요','rgba(0,0,0,.85)'); return; }
   if(mb) mb.innerHTML='&#9203; 옮기는 중…';
   var fail=function(m){ sttResetMic(); window._sttAutoRun=null; showToast('🎤 '+_recShort(m||'음성을 옮기지 못했어요'),'rgba(0,0,0,.85)'); };
-  var giveUp=function(){
+  var giveUp=function(lastErr){
     /* Gemini 받아쓰기가 막혔다 → 이번 세션은 예전 음성인식으로 돌리고, 바로 다시 듣는다 */
     _recOff=true;
     var run=window._sttAutoRun; window._sttAutoRun=null; sttResetMic();
-    showToast('🎤 받아쓰기가 막혔어요 · 다시 말해주세요','rgba(0,0,0,.85)');
+    showToast('🎤 받아쓰기 안 됨'+(lastErr?(' · '+_recShort(lastErr)):'')+' · 다시 말해주세요','rgba(0,0,0,.85)');
     var t=window._stt.target, m=window._stt.mic, idl=window._stt.idle, lis=window._stt.listen||idl;
     setTimeout(function(){ try{ sttStart(t, m, idl, lis, run); }catch(e){} }, 900);
   };
@@ -4685,17 +4712,13 @@ function _recSend(blob){
         ]}],
         generationConfig:{temperature:0, maxOutputTokens:256}
       });
+      var MODELS=REC_MODELS, _recLastErr='';
       var tryModel=function(i){
-        if(i>=REC_MODELS.length){ giveUp(); return; }
-        fetch('https://generativelanguage.googleapis.com/v1beta/models/'+REC_MODELS[i]+':generateContent?key='+encodeURIComponent(geminiKey),{
+        if(i>=MODELS.length){ giveUp(_recLastErr); return; }
+        fetch('https://generativelanguage.googleapis.com/v1beta/models/'+MODELS[i]+':generateContent?key='+encodeURIComponent(geminiKey),{
           method:'POST', headers:{'Content-Type':'application/json'}, body:body
         }).then(function(r){ return r.json(); }).then(function(d){
-          if(d && d.error){
-            var m=String(d.error.message||'');
-            /* 할당량·없는 모델·미지원이면 다음 모델로 */
-            if(/quota|limit|not found|not supported|unsupported|RESOURCE_EXHAUSTED/i.test(m)){ tryModel(i+1); return; }
-            fail(m); return;
-          }
+          if(d && d.error){ _recLastErr=String(d.error.message||''); tryModel(i+1); return; }
           var t='';
           try{ t=(d.candidates[0].content.parts||[]).map(function(p){ return p.text||''; }).join(''); }catch(e){}
           t=String(t).replace(/\s+/g,' ').replace(/^["'`\s]+|["'`\s]+$/g,'').trim();
@@ -4706,7 +4729,7 @@ function _recSend(blob){
           if(window._sttAutoRun){ var fn=window._sttAutoRun; window._sttAutoRun=null; setTimeout(fn, STT_AUTORUN_MS); }
         })['catch'](function(){ tryModel(i+1); });
       };
-      tryModel(0);
+      _recGetModels(function(list){ MODELS=list; tryModel(0); });
     }, function(){ fail('녹음을 처리하지 못했어요'); });
   };
   fr.readAsArrayBuffer(blob);
