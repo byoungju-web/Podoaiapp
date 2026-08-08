@@ -4,9 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
    <link rel="manifest" href="/manifest.json">
-<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
-<link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png">
-<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="192x192" href="/podo-192.png">
+<link rel="apple-touch-icon" href="/podo-192.png">
 <meta name="theme-color" content="#ffffff">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="포도야">
@@ -643,9 +642,9 @@ body{background:#f4f5fa;display:flex;justify-content:center;min-height:100vh;fon
       <div style="font-size:15px;font-weight:700;color:#141720;margin-bottom:3px">무료로 시작 &#183; 고급은 본인 부담</div>
       <div style="font-size:12.5px;color:#141720;margin-bottom:13px">서버 없이 내 폰에서 · AI 요금은 본인 계정에 부과</div>
       <div style="display:flex;flex-direction:column;gap:10px;font-size:13.5px;color:#141720;line-height:1.45">
-        <div>&#9889; <b>무료</b>: Puter(무료 로그인) 또는 무료 Gemini 키 — 채팅&#183;글쓰기&#183;자동화&#183;리서치&#183;말로열기 전부</div>
-        <div>&#128142; <b>고급(웹검색&#183;최신정보&#183;고품질)</b>: 본인 유료 API 키 또는 Puter 유료 — <b style="color:#6645dd">요금은 본인 부담</b></div>
-        <div>&#128274; <b>데이터는 내 폰에만</b> 저장 — 외부 서버 없음</div>
+        <div><b>무료</b>: Puter(무료 로그인) 또는 무료 Gemini 키 — 채팅&#183;글쓰기&#183;자동화&#183;리서치&#183;말로열기 전부</div>
+        <div><b>고급(웹검색&#183;최신정보&#183;고품질)</b>: 본인 유료 API 키 또는 Puter 유료 — <b style="color:#6645dd">요금은 본인 부담</b></div>
+        <div><b>데이터는 내 폰에만</b> 저장 — 외부 서버 없음</div>
       </div>
       <div style="margin-top:13px;padding-top:12px;border-top:1px solid rgba(0,0,0,.4);font-size:13px;color:#141720;line-height:1.9">
         &#183; 무료로 쓰려면 아래 <b style="color:#1f2430">AI 모델</b>에서 Puter를 켜거나 무료 키를 넣어주세요<br>
@@ -751,14 +750,6 @@ body{background:#f4f5fa;display:flex;justify-content:center;min-height:100vh;fon
     <!-- 런처 설정 -->
     <div style="font-size:12px;font-weight:800;color:#1f2430;letter-spacing:1px;padding:8px 4px 6px">&#9881;&#65039; 런처 설정</div>
     <div class="my-card">
-      <div class="my-row" onclick="openLauncherSettings()">
-        <div class="my-row-ic" style="background:rgba(99,104,144,.18)">&#9881;&#65039;</div>
-        <div>
-          <div class="my-row-txt">기본 홈앱 설정</div>
-          <div style="font-size:13.5px;color:#141720;margin-top:3px">기존 런처로 되돌리기 / Podoya 선택</div>
-        </div>
-        <div class="my-row-ar">&#8250;</div>
-      </div>
       <div class="my-row" onclick="openCustom()">
         <div class="my-row-ic" style="background:rgba(0,229,255,.12)">&#128296;</div>
         <div>
@@ -828,17 +819,6 @@ body{background:#f4f5fa;display:flex;justify-content:center;min-height:100vh;fon
         <option value="auto">&#127760; 자동감지</option>
       </select>
       <div style="margin-top:10px;font-size:11px;color:#1f2430" id="lang-status">현재: 자동감지</div>
-    </div>
-
-    <!-- 캘린더 빠른 일정 추가 -->
-    <div style="font-size:12px;font-weight:800;color:#1f2430;letter-spacing:1px;padding:8px 4px 6px">&#128197; 일정 빠른 추가</div>
-    <div class="my-card" style="padding:14px">
-      <div style="font-size:11px;color:#1f2430;margin-bottom:8px">PODOYA SERVICES &#8594; 캘린더 먼저 연결 후 사용</div>
-      <div style="display:flex;gap:8px">
-        <input id="cal-quick-input" placeholder="내일 오후 3시 치과 예약" style="flex:1;background:#eef0f7;border:1.5px solid rgba(0,0,0,.28);border-radius:11px;padding:10px 12px;color:#141720;font-size:13px;outline:none;font-family:inherit">
-        <button onclick="quickAddEvent()" style="background:linear-gradient(135deg,#00e5ff,#7b61ff);border:none;border-radius:11px;padding:10px 14px;color:#16181f;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;flex-shrink:0">추가</button>
-      </div>
-      <div id="cal-result" style="display:none;margin-top:10px;background:#eef0f7;border-radius:10px;padding:10px;font-size:12px;color:#141720"></div>
     </div>
 
     <!-- AI 명함 스캐너: 홈화면 Podoya 기능으로 이동됨 -->
@@ -1553,7 +1533,6 @@ function secRenderCard(){
     '<div style="font-size:13px;font-weight:800;color:#1f2430;margin-bottom:4px">🔒 기기 잠금</div>'
     +'<div style="font-size:11.5px;color:#6b7280;line-height:1.6;margin-bottom:10px">'+secStatusText()+'</div>'
     +btns
-    +'<button onclick="podoResetAll()" style="width:100%;margin-top:9px;padding:11px;border-radius:12px;border:1.5px solid #fca5a5;background:#fff5f5;color:#dc2626;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit">🗑️ 이 기기 데이터 전체 삭제 (새로 시작)</button>'
     +'<div style="font-size:10.5px;color:#9aa0b4;line-height:1.6;margin-top:9px">이 앱은 서버가 없어요. 모든 데이터는 <b>이 기기 브라우저에만</b> 저장되고, 다른 사람 기기에서는 절대 보이지 않습니다. PIN은 <b>이 기기를 빌려줄 때</b>를 위한 보호입니다.</div>';
 }
 function secAskSetup(){
@@ -3917,7 +3896,7 @@ var COMPANION_PROMPT="너는 '포도', 사용자의 다정한 AI 친구야. 따�
 function setChatHeaderName(name,status){
   var n=document.getElementById('chatheader-name'); if(n) n.textContent=name;
   var s=document.getElementById('chatheader-status'); if(s) s.textContent=status;
-  var av=document.getElementById('chatheader-av'); if(av){ if(name===COMPANION_NAME){ av.textContent=''; av.innerHTML='<img src="/icon-192.png" alt="포도야" style="width:100%;height:100%;object-fit:cover;border-radius:inherit;display:block">'; } else { av.innerHTML=''; av.textContent='AI'; } }
+  var av=document.getElementById('chatheader-av'); if(av){ if(name===COMPANION_NAME){ av.textContent=''; av.innerHTML='<img src="/podo-192.png" alt="포도야" style="width:100%;height:100%;object-fit:cover;border-radius:inherit;display:block">'; } else { av.innerHTML=''; av.textContent='AI'; } }
 }
 /* ===== 영어회화 연습 (채팅 페르소나) ===== */
 var ENGLISH_PROMPT="You are 'Leo', a friendly and patient English conversation partner for a Korean learner. Have a natural, encouraging English conversation. Use simple clear English (beginner-intermediate). Keep each reply short (2-3 sentences) and end with a question to keep the conversation going. If the user makes a notable mistake, add ONE short gentle correction in Korean at the very end like: (\uD83D\uDCA1 자연스러운 표현: ...). Never lecture.";
@@ -10002,7 +9981,7 @@ function makeLauncher(){
     var sep=document.createElement('div');
     sep.style.cssText='display:flex;align-items:center;gap:10px;padding:12px 14px 6px;';
     sep.innerHTML='<div style="flex:1;height:1px;background:rgba(0,0,0,.26)"></div>'
-      +'<span style="font-size:13px;font-weight:800;color:#8b35e0;letter-spacing:.5px;display:inline-flex;align-items:center;gap:6px"><img src="/icon-192.png" alt="" style="width:18px;height:18px;border-radius:5px;vertical-align:-3px">Podoya 기능 <span style="font-size:10px;color:#9aa0b4;font-weight:600">v4.94 🌍</span></span>'
+      +'<span style="font-size:13px;font-weight:800;color:#8b35e0;letter-spacing:.5px;display:inline-flex;align-items:center;gap:6px"><img src="/podo-192.png" alt="" style="width:18px;height:18px;border-radius:5px;vertical-align:-3px">Podoya 기능 <span style="font-size:10px;color:#9aa0b4;font-weight:600">v4.94 🌍</span></span>'
       +'<div style="flex:1;height:1px;background:rgba(0,0,0,.26)"></div>';
     d.appendChild(sep);
 
@@ -10085,7 +10064,7 @@ function makeShopPanel(){
 
 function makeStartCard(){
   var d=document.createElement('div'); d.className='scard'; d.id='startcard';
-  d.innerHTML='<img src="/icon-192.png" alt="포도야" style="width:52px;height:52px;display:block;margin:0 auto 7px;border-radius:13px">'
+  d.innerHTML='<img src="/podo-192.png" alt="포도야" style="width:52px;height:52px;display:block;margin:0 auto 7px;border-radius:13px">'
     +'<div style="font-size:15px;font-weight:700;color:#141720;text-align:center;margin-bottom:4px">Podoya</div>'
     +'<div style="font-size:11px;color:#1f2430;text-align:center;line-height:1.6;margin-bottom:14px">AI가 도와주는 스마트 런처<br>런처 무료 · AI 채팅은 API 키 필요</div>'
     +'<button class="scta" onclick="openUp()">🍇 AI 채팅 이용하기</button>'
@@ -13476,7 +13455,7 @@ function renderUp(){
   var inner=document.getElementById('upin');
   if(upStep==='intro'){
     inner.innerHTML='<div style="text-align:center;padding:22px 0 18px">'
-      +'<img src="/icon-192.png" alt="포도야" style="width:78px;height:78px;display:block;margin:0 auto 10px;border-radius:18px">'
+      +'<img src="/podo-192.png" alt="포도야" style="width:78px;height:78px;display:block;margin:0 auto 10px;border-radius:18px">'
       +'<div style="font-size:20px;font-weight:700;color:#141720;margin-bottom:5px">Podoya</div>'
       +'<div style="font-size:11px;color:#1f2430;margin-bottom:20px">내 폰이 서버 · 완전한 개인정보 보호</div>'
       +'</div>'
