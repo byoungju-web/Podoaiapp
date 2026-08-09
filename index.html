@@ -10,7 +10,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="포도야">
 <title>Podoya 🍇</title>
-<!-- build: stt-fast2 -->
+<!-- build: stt-warm -->
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{overflow-x:hidden;max-width:100vw}
@@ -722,6 +722,14 @@ body{background:#f4f5fa;display:flex;justify-content:center;min-height:100vh;fon
         </div>
         <div class="my-row-ar">&#8250;</div>
       </div>
+      <div class="my-row" id="row-dg-key" onclick="openDgKey()">
+        <div class="my-row-ic" style="background:rgba(19,239,147,.16)">&#127908;</div>
+        <div>
+          <div class="my-row-txt">Deepgram 받아쓰기 키</div>
+          <div style="font-size:13.5px;color:#141720;margin-top:3px" id="dg-key-sub">미등록 (선택 · 말하기 속도 향상)</div>
+        </div>
+        <div class="my-row-ar">&#8250;</div>
+      </div>
       <div class="my-row" id="row-websearch-key" onclick="openWebSearchKey()">
         <div class="my-row-ic" style="background:rgba(123,97,255,.12)">&#127760;</div>
         <div>
@@ -917,6 +925,62 @@ body{background:#f4f5fa;display:flex;justify-content:center;min-height:100vh;fon
         &#128142; Gemini 연결하기
       </button>
       <button onclick="closeGeminiKey()"
+        style="width:100%;padding:12px;border-radius:13px;border:1px solid rgba(0,0,0,.28);background:rgba(0,0,0,.16);color:#1f2430;font-size:13px;cursor:pointer;font-family:inherit">
+        취소
+      </button>
+    </div>
+  </div>
+
+  <!-- Deepgram 받아쓰기 키 시트 -->
+  <div id="dgbg" onclick="if(event.target===this)closeDgKey()" style="display:none;position:fixed;inset:0;z-index:650;background:rgba(0,0,0,.82);backdrop-filter:blur(8px);align-items:flex-end;justify-content:center">
+    <div style="width:min(390px,100vw);background:linear-gradient(160deg,#eef1f8,#ffffff);border-radius:28px 28px 0 0;border:1px solid rgba(19,239,147,.25);padding:20px 18px 36px">
+      <div style="display:flex;align-items:center;margin-bottom:18px">
+        <div style="font-size:26px;margin-right:10px">&#127908;</div>
+        <div>
+          <div style="font-size:17px;font-weight:800;color:#141720">Deepgram 받아쓰기 키</div>
+          <div style="font-size:13.5px;color:#141720;margin-top:3px">말하기가 훨씬 빨라져요 · 선택</div>
+        </div>
+        <button onclick="closeDgKey()" style="margin-left:auto;background:rgba(0,0,0,.24);border:none;width:30px;height:30px;border-radius:9px;color:#1f2430;font-size:14px;cursor:pointer">&#10005;</button>
+      </div>
+
+      <div style="background:rgba(19,239,147,.09);border:1px solid rgba(19,239,147,.28);border-radius:14px;padding:13px 15px;margin-bottom:14px">
+        <div style="font-size:12px;font-weight:700;color:#0b8f5e;margin-bottom:6px">&#9889; 왜 넣나요?</div>
+        <div style="font-size:11px;color:#252a39;line-height:1.8">
+          지금은 말이 끝나고 <b style="color:#141720">3~4초</b> 걸려요<br>
+          키를 넣으면 <b style="color:#141720">1초 안팎</b>으로 줄어듭니다<br>
+          안 넣어도 지금 그대로 쓸 수 있어요
+        </div>
+      </div>
+
+      <div style="background:rgba(0,0,0,.03);border-radius:12px;padding:12px 14px;margin-bottom:14px">
+        <div style="font-size:11px;font-weight:700;color:rgba(0,0,0,.75);margin-bottom:8px">&#128176; 요금 — 사실상 0원</div>
+        <div style="font-size:11px;color:#252a39;line-height:1.8">
+          가입하면 <b style="color:#141720">$200 무료</b> (카드 등록 없음)<br>
+          5초짜리 명령 기준 <b style="color:#141720">50만 번</b> 분량<br>
+          다 쓰면 그냥 멈춰요 — 모르게 청구되지 않습니다
+        </div>
+        <div style="font-size:11px;font-weight:700;color:rgba(0,0,0,.75);margin:12px 0 8px">&#128073; 발급 방법</div>
+        <div style="font-size:11px;color:#252a39;line-height:1.8">1. deepgram.com 가입<br>2. API Keys → Create a New API Key<br>3. 키 복사 후 아래에 붙여넣기</div>
+        <a href="https://console.deepgram.com/signup" target="_blank" rel="noopener noreferrer" style="display:block;margin-top:10px;padding:9px;border-radius:10px;border:1px solid rgba(19,239,147,.45);background:rgba(19,239,147,.12);color:#0b8f5e;font-size:12px;font-weight:700;text-align:center;text-decoration:none">Deepgram 키 발급받기 &#8599;</a>
+      </div>
+
+      <div style="position:relative;margin-bottom:8px">
+        <input id="dg-ki" type="password" placeholder="Deepgram API Key" autocomplete="off"
+          style="width:100%;background:#eef0f7;border:1.5px solid rgba(0,0,0,.3);border-radius:12px;padding:13px 46px 13px 14px;color:#141720;font-size:12px;outline:none;font-family:monospace;box-sizing:border-box">
+        <button onclick="var k=document.getElementById('dg-ki');k.type=k.type==='password'?'text':'password'"
+          style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;font-size:18px;cursor:pointer">&#128065;&#65039;</button>
+      </div>
+      <div id="dg-err" style="background:rgba(239,68,68,.1);border-radius:8px;padding:8px 10px;font-size:11px;color:#ef4444;margin-bottom:8px;display:none"></div>
+
+      <button id="dg-vb" onclick="saveDgKey()"
+        style="width:100%;padding:13px;border-radius:13px;border:none;background:linear-gradient(135deg,#13ef93,#0b8f5e);color:#fff;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;margin-bottom:8px">
+        &#127908; 빠른 받아쓰기 켜기
+      </button>
+      <button onclick="clearDgKey()"
+        style="width:100%;padding:12px;border-radius:13px;border:1px solid rgba(0,0,0,.28);background:rgba(0,0,0,.06);color:#1f2430;font-size:13px;cursor:pointer;font-family:inherit;margin-bottom:8px">
+        키 지우기 (Puter로 되돌리기)
+      </button>
+      <button onclick="closeDgKey()"
         style="width:100%;padding:12px;border-radius:13px;border:1px solid rgba(0,0,0,.28);background:rgba(0,0,0,.16);color:#1f2430;font-size:13px;cursor:pointer;font-family:inherit">
         취소
       </button>
@@ -1375,7 +1439,7 @@ var KW = {
    · 이 앱은 서버가 없어 모든 데이터가 이 기기 브라우저에만 저장됩니다.
    · PIN을 걸면 API 키·연락처·계좌 등이 암호화되어, 기기를 빌려줘도 열람 불가.
    · 잠금 해제는 탭이 살아있는 동안만 유지(sessionStorage) → 브라우저를 닫으면 다시 잠김. */
-var SEC_KEYS=['podoai_k','podoai_gk','podoai_wsk','podoai_kakao_rest','podoai_contacts','podoai_tg_token',
+var SEC_KEYS=['podoai_k','podoai_gk','podoai_dg','podoai_wsk','podoai_kakao_rest','podoai_contacts','podoai_tg_token',
   'podoai_toss_accts','podoai_tg','podoai_admin','podoai_relay_url','podoai_proxy','podoai_sub_server_url'];
 var SEC_STORE='podoai_vault', SEC_SESS='podoai_vault_dk';
 var SEC={ on:false, unlocked:false, guest:false, vault:{}, dk:null };
@@ -1471,6 +1535,7 @@ function secLockNow(){
 function secAfterUnlock(){
   try{ apiKey=lsG('podoai_k',''); }catch(e){}
   try{ geminiKey=lsG('podoai_gk',''); }catch(e){}
+  try{ dgKey=lsG('podoai_dg',''); }catch(e){}
   try{ webKey=lsG('podoai_wsk',''); }catch(e){}
   try{ if(typeof updateMyStatus==='function') updateMyStatus(); }catch(e){}
   try{ if(typeof refreshLauncher==='function') refreshLauncher(); }catch(e){}
@@ -1568,6 +1633,29 @@ function lsS(k,v){
 
 var apiKey = lsG('podoai_k','');
 var geminiKey = lsG('podoai_gk','');
+var dgKey = lsG('podoai_dg','');
+function dgKeyStatus(){
+  var el=document.getElementById('dg-key-sub'); if(!el) return;
+  el.textContent = dgKey ? '✅ 등록됨 — 빠른 받아쓰기 켜짐' : '미등록 (선택 · 말하기 속도 향상)';
+}
+function openDgKey(){
+  var ov=document.getElementById('dgbg'); if(!ov) return;
+  var i=document.getElementById('dg-ki'); if(i) i.value=dgKey||'';
+  var e=document.getElementById('dg-err'); if(e) e.style.display='none';
+  ov.style.display='flex'; history.pushState({p:true},'','');
+}
+function closeDgKey(){ var ov=document.getElementById('dgbg'); if(ov) ov.style.display='none'; }
+function saveDgKey(){
+  var i=document.getElementById('dg-ki'), k=(i&&i.value||'').trim();
+  var e=document.getElementById('dg-err');
+  if(k.length<20){ if(e){ e.textContent='키가 너무 짧아요. 다시 확인해 주세요.'; e.style.display='block'; } return; }
+  dgKey=k; lsS('podoai_dg',k); _recOff=false; dgKeyStatus(); closeDgKey();
+  try{ showToast('🎤 빠른 받아쓰기를 켰어요','rgba(0,0,0,.85)'); }catch(_e){}
+}
+function clearDgKey(){
+  dgKey=''; lsS('podoai_dg',''); dgKeyStatus(); closeDgKey();
+  try{ showToast('키를 지웠어요 · Puter로 돌아갑니다','rgba(0,0,0,.85)'); }catch(e){}
+}
 /* ══════════════════════════════════════════════════════════════
    🚪 첫 문을 열어둔다
    전에는 기본값이 'claude' 였다. Claude 키는 카드 등록 + 선불 충전이 필요하다.
@@ -4551,7 +4639,7 @@ window.onSttResult=function(text){ var el=document.getElementById(window._stt.ta
 window.onSttError=function(msg){ window._sttAutoRun=null; sttResetMic(); if(msg){ showToast(msg,'rgba(0,0,0,.85)'); } };
 /* 음성 인식 타이밍 (사용자 조정) */
 var STT_MAX_MS=20000;       // 네이티브(APK) 최대 듣기 안전 종료
-var STT_AUTORUN_MS=150;     // 인식 종료 후 자동 실행까지 대기(짧게)
+var STT_AUTORUN_MS=0;       // 대기 없이 바로 실행
 var STT_SILENCE_MS=1000;    // 말이 없으면 이 시간(1초) 뒤 자동 종료·실행
 var CHAIN_MAX_MS=20000;     // 웹 인식 전체 최대 듣기 시간(안전 종료)
 var _sttMaxTimer=null, _sttSilenceTimer=null, _sttAborted=false;
@@ -4597,6 +4685,7 @@ function _recAvail(){
   try{
     if(_recOff) return false;
     if(!(window.MediaRecorder && navigator.mediaDevices && navigator.mediaDevices.getUserMedia)) return false;
+    if(dgKey) return true;                             /* Deepgram — 가장 빠름 */
     if(_puterSTT()) return true;                       /* Puter 받아쓰기 — 키도 할당량도 없다 */
     if(!(window.AudioContext||window.webkitAudioContext)) return false;
     return !!geminiKey;
@@ -4687,6 +4776,29 @@ function _recGetModels(cb){
     })['catch'](function(){ fin(REC_MODELS); });
 }
 function _recShort(m){ m=String(m||''); return m.length>60 ? m.slice(0,60)+'…' : m; }
+/* ⚡ Deepgram 받아쓰기 — 녹음 파일을 그대로 던진다. 왕복이 짧아 1초 안팎. */
+function _dgLang(){
+  var t='ko-KR'; try{ t=appLangTag()||'ko-KR'; }catch(e){}
+  return String(t).split('-')[0].toLowerCase() || 'ko';
+}
+function _recSendDg(blob, onFail){
+  var over=false, to=setTimeout(function(){ if(!over){ over=true; onFail('시간 초과'); } }, 6000);
+  var url='https://api.deepgram.com/v1/listen?model=nova-3&smart_format=true&language='+encodeURIComponent(_dgLang());
+  fetch(url,{
+    method:'POST',
+    headers:{ 'Authorization':'Token '+dgKey, 'Content-Type': (blob.type||'audio/webm') },
+    body: blob
+  }).then(function(r){
+    if(!r.ok) return r.text().then(function(x){ throw new Error('HTTP '+r.status+' '+String(x).slice(0,80)); });
+    return r.json();
+  }).then(function(d){
+    if(over) return; over=true; clearTimeout(to);
+    var t='';
+    try{ t=d.results.channels[0].alternatives[0].transcript||''; }catch(e){}
+    if(!t){ onFail('빈 결과'); return; }
+    _recApply(t);
+  })['catch'](function(e){ if(over) return; over=true; clearTimeout(to); onFail((e&&e.message)||'Deepgram 실패'); });
+}
 function _puterSTT(){ try{ return (typeof puter!=='undefined') && puter.ai && typeof puter.ai.speech2txt==='function'; }catch(e){ return false; } }
 function _recApply(t){
   t=String(t||'').replace(/\s+/g,' ').replace(/^["'`\s]+|["'`\s]+$/g,'').trim();
@@ -4718,8 +4830,10 @@ function _recSend(blob){
   var mb=document.getElementById(window._stt.mic);
   if(!blob || blob.size<2000){ sttResetMic(); window._sttAutoRun=null; showToast('🎤 잘 안 들렸어요. 다시 말해주세요','rgba(0,0,0,.85)'); return; }
   if(mb) mb.innerHTML='&#9203; 옮기는 중…';
-  if(_puterSTT()){ _recSendPuter(blob, function(){ _recSendGemini(blob); }); return; }
-  _recSendGemini(blob);
+  /* 빠른 순서: Deepgram → Puter → Gemini → 예전 음성인식 */
+  var toPuter=function(){ if(_puterSTT()){ _recSendPuter(blob, function(){ _recSendGemini(blob); }); } else { _recSendGemini(blob); } };
+  if(dgKey){ _recSendDg(blob, toPuter); return; }
+  toPuter();
 }
 function _recSendGemini(blob){
   var mb=document.getElementById(window._stt.mic);
@@ -4768,6 +4882,29 @@ function _recSendGemini(blob){
   };
   fr.readAsArrayBuffer(blob);
 }
+/* ⚡ 마이크 미리 열어두기
+   권한을 이미 허용한 경우에만, 그리고 사용자가 화면을 한 번 만진 뒤에만 연다.
+   (허락 없이 마이크를 켜지 않는다) 두 번째부터가 아니라 첫 탭부터 즉시 켜진다. */
+var _recWarmed=false;
+function _recPrewarm(){
+  if(_recWarmed) return; _recWarmed=true;
+  try{
+    if(!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia)) return;
+    var go=function(){
+      if(_rec.stream && _rec.stream.active) return;
+      navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true, noiseSuppression:true, channelCount:1, sampleRate:16000}})
+        .then(function(st){
+          _rec.stream=st; _recRelease();                       /* 45초 뒤 자동 반납 */
+          try{ var AC=window.AudioContext||window.webkitAudioContext; if(AC && (!_rec.ac||_rec.ac.state==='closed')) _rec.ac=new AC(); }catch(e){}
+        })['catch'](function(){ _recWarmed=false; });
+    };
+    if(navigator.permissions && navigator.permissions.query){
+      navigator.permissions.query({name:'microphone'}).then(function(r){
+        if(r && r.state==='granted') go(); else _recWarmed=false;   /* 아직 허용 전이면 건드리지 않는다 */
+      })['catch'](function(){ _recWarmed=false; });
+    } else { _recWarmed=false; }
+  }catch(e){ _recWarmed=false; }
+}
 function _recStart(targetId, micId, idleHtml, listeningHtml){
   var mb=document.getElementById(micId);
   var go=function(stream){
@@ -4810,11 +4947,11 @@ function _recStart(targetId, micId, idleHtml, listeningHtml){
       if(spoke>=REC_MINSPK && sil>=REC_SILENCE) _recCut();
     }, REC_TICK);
   };
+  if(mb) mb.innerHTML=listeningHtml;          /* 체감 0초 — 기다리게 두지 않는다 */
   if(_rec.stream && _rec.stream.active){
     if(_rec.relTimer){ clearTimeout(_rec.relTimer); _rec.relTimer=null; }
     go(_rec.stream); return;
   }
-  if(mb) mb.innerHTML='&#9203; 여는 중…';
   navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true, noiseSuppression:true, channelCount:1, sampleRate:16000}})
     .then(go)['catch'](function(){ sttResetMic(); showToast('마이크 권한을 허용해 주세요.','rgba(0,0,0,.85)'); });
 }
@@ -5575,6 +5712,7 @@ function openVoiceAct(){
   var rw=vEl('result-wrap'); if(rw) rw.style.display='none';
   var er=vEl('err'); if(er) er.style.display='none';
   voiceActUrl=''; voiceActText=''; voiceActNative='';
+  try{ _recPrewarm(); }catch(e){}
   document.getElementById('voiceact-bg').style.display='flex';
   history.pushState({p:true},'','');
 }
@@ -9768,6 +9906,27 @@ function openNormalChat(el){
 }
 
 /* ===== 무료 TTS — 포도가 음성으로 말하기 (브라우저 speechSynthesis, 키 불필요) ===== */
+/* ⚡ 앱이 켜지면 미리 준비해 둔다 (사용자가 화면을 한 번 만진 뒤) */
+var _ttsVoices=null;
+function _preloadVoices(){
+  try{
+    if(!('speechSynthesis' in window)) return;
+    var grab=function(){ var v=window.speechSynthesis.getVoices()||[]; if(v.length) _ttsVoices=v; };
+    grab();
+    if(!_ttsVoices) window.speechSynthesis.onvoiceschanged=function(){ grab(); };
+  }catch(e){}
+}
+(function(){
+  var once=function(){
+    document.removeEventListener('pointerdown', once, true);
+    document.removeEventListener('touchstart', once, true);
+    try{ _preloadVoices(); }catch(e){}
+    try{ _recPrewarm(); }catch(e){}
+  };
+  document.addEventListener('pointerdown', once, true);
+  document.addEventListener('touchstart', once, true);
+  try{ if(document.readyState!=='loading') setTimeout(_preloadVoices, 300); }catch(e){}
+})();
 function ttsSupported(){ return ('speechSynthesis' in window) && (typeof SpeechSynthesisUtterance!=='undefined'); }
 function updateTTSBtn(){
   var b=document.getElementById('tts-btn'); if(!b) return;
@@ -10413,6 +10572,7 @@ function updateMyStatus(){
   if(cs) cs.textContent=apiKey?'✅ 등록됨':'미등록';
   if(gs) gs.textContent=geminiKey?'✅ 등록됨':'미등록 (무료 발급 가능)';
   try{ webKeyStatus(); }catch(e){}
+  try{ dgKeyStatus(); }catch(e){}
   try{ kakaoKeyStatus(); }catch(e){}
   try{ proxyUrlStatus(); }catch(e){}
   // 언어 칩 상태도 갱신
