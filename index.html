@@ -10,7 +10,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="포도야">
 <title>Podoya 🍇</title>
-<!-- build: stt-puter -->
+<!-- build: stt-puter-fast -->
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{overflow-x:hidden;max-width:100vw}
@@ -4585,11 +4585,11 @@ window.onSttEnd=function(){ _sttClearTimers(); sttResetMic(); var el=document.ge
    그래서 그걸 안 쓴다. 마이크를 열어 녹음하고, 소리 크기로 말 끝을 판단해 잘라
    Gemini에게 보내 글자로 받는다. 시스템을 부르는 일이 없으니 소리도 없다.
    Gemini 키가 없으면 예전 방식(음성인식)으로 그대로 돌아간다. */
-var REC_SILENCE=800;   /* 이만큼 조용하면 한 문장 끝 */
+var REC_SILENCE=520;   /* 이만큼 조용하면 한 문장 끝 */
 var REC_MINSPK=300;     /* 최소 이만큼은 말해야 인정 */
-var REC_MAX=15000;      /* 최대 녹음 길이 */
+var REC_MAX=12000;      /* 최대 녹음 길이 */
 var REC_LEVEL=0.012;    /* 말인지 잡음인지 가르는 소리 크기 */
-var REC_TICK=100;
+var REC_TICK=60;
 var _rec={stream:null, mr:null, chunks:[], ac:null, an:null, timer:null, relTimer:null, active:false, cancel:false};
 var _recOff=false;   /* Gemini 받아쓰기가 전부 실패하면 이번 세션은 예전 음성인식으로 */
 
@@ -4615,7 +4615,7 @@ function _recRelease(){
     _rec.relTimer=null;
     try{ if(_rec.stream) _rec.stream.getTracks().forEach(function(t){ t.stop(); }); }catch(e){}
     _rec.stream=null; _rec.an=null;
-  }, 8000);
+  }, 45000);
 }
 function _recCut(){ _recClearTimer(); try{ if(_rec.mr && _rec.mr.state==='recording') _rec.mr.stop(); }catch(e){} }
 function _recAbort(){ if(!_rec.active) return; _rec.cancel=true; _recCut(); }
@@ -4698,8 +4698,8 @@ function _recApply(t){
 }
 /* Puter 받아쓰기 — 녹음한 파일을 그대로 넘긴다(형식 변환이 없어 빠르다) */
 function _recSendPuter(blob, onFail){
-  var over=false, to=setTimeout(function(){ if(!over){ over=true; onFail('시간 초과'); } }, 12000);
-  puter.ai.speech2txt(blob).then(function(r){
+  var over=false, to=setTimeout(function(){ if(!over){ over=true; onFail('시간 초과'); } }, 7000);
+  puter.ai.speech2txt(blob, { model:'gpt-4o-mini-transcribe' }).then(function(r){
     if(over) return; over=true; clearTimeout(to);
     var t=(r && (r.text||r.transcript)) || (typeof r==='string'?r:'');
     if(!t){ onFail('빈 결과'); return; }
@@ -4782,8 +4782,9 @@ function _recStart(targetId, micId, idleHtml, listeningHtml){
       _rec.an=_rec.ac.createAnalyser(); _rec.an.fftSize=1024; src.connect(_rec.an);
     }catch(e){ _rec.an=null; }
     var mime=_recMime();
-    try{ _rec.mr = mime ? new MediaRecorder(stream,{mimeType:mime}) : new MediaRecorder(stream); }
-    catch(e){ try{ _rec.mr=new MediaRecorder(stream); }catch(e2){ _rec.active=false; window._stt.listening=false; sttResetMic(); showToast('녹음을 시작할 수 없어요.','rgba(0,0,0,.85)'); return; } }
+    var mopt = mime ? {mimeType:mime, audioBitsPerSecond:24000} : {audioBitsPerSecond:24000};
+    try{ _rec.mr = new MediaRecorder(stream, mopt); }
+    catch(e){ try{ _rec.mr = mime ? new MediaRecorder(stream,{mimeType:mime}) : new MediaRecorder(stream); }catch(e2){ _rec.active=false; window._stt.listening=false; sttResetMic(); showToast('녹음을 시작할 수 없어요.','rgba(0,0,0,.85)'); return; } }
     _rec.chunks=[];
     _rec.mr.ondataavailable=function(e){ if(e.data && e.data.size) _rec.chunks.push(e.data); };
     _rec.mr.onstop=function(){
@@ -4793,7 +4794,7 @@ function _recStart(targetId, micId, idleHtml, listeningHtml){
       if(_rec.cancel){ _rec.cancel=false; sttResetMic(); window._sttAutoRun=null; return; }
       _recSend(blob);
     };
-    try{ _rec.mr.start(); }catch(e){}
+    try{ _rec.mr.start(200); }catch(e){}
     var spoke=0, sil=0, total=0;
     _recClearTimer();
     _rec.timer=setInterval(function(){
@@ -4813,7 +4814,8 @@ function _recStart(targetId, micId, idleHtml, listeningHtml){
     if(_rec.relTimer){ clearTimeout(_rec.relTimer); _rec.relTimer=null; }
     go(_rec.stream); return;
   }
-  navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true, noiseSuppression:true}})
+  if(mb) mb.innerHTML='&#9203; 여는 중…';
+  navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true, noiseSuppression:true, channelCount:1, sampleRate:16000}})
     .then(go)['catch'](function(){ sttResetMic(); showToast('마이크 권한을 허용해 주세요.','rgba(0,0,0,.85)'); });
 }
 
