@@ -10,7 +10,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="포도야">
 <title>Podoya 🍇</title>
-<!-- build: license -->
+<!-- build: license-search -->
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{overflow-x:hidden;max-width:100vw}
@@ -6077,6 +6077,28 @@ function nativeFetch(url, opts){
   return fetch(url, opts);
 }
 function webSearch(query, onOk, onErr){
+  /* 🎟️ 본인 키가 없고 이용권이 있으면 워커를 거쳐 검색한다 (본인 키가 있으면 그쪽이 먼저) */
+  if(!webKey && typeof licActive==='function' && licActive()){
+    fetch(PODO_API+'/api/search',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','X-Podo-Code':licCode},
+      body:JSON.stringify({query:query, max_results:5})
+    }).then(function(r){ return r.json().then(function(d){ return {s:r.status,d:d}; }); })
+      .then(function(res){
+        var d=res.d;
+        if(res.s===402){
+          showToast('🎟️ '+((d&&d.error)||'검색 한도를 다 썼어요'),'rgba(0,0,0,.85)');
+          licFetchStatus(function(){ try{ licRenderCard(); }catch(e){} });
+          if(onErr) onErr(new Error('LIC:'+((d&&d.error)||'한도')));
+          return;
+        }
+        if(!d || d.error){ if(onErr) onErr(new Error((d&&d.error)||'검색 실패')); return; }
+        if(licInfo && licInfo.left && typeof d.left==='number') licInfo.left.search=d.left;
+        try{ licRenderCard(); }catch(e){}
+        onOk(d.results||[]);
+      })['catch'](function(e){ if(onErr) onErr(e); });
+    return;
+  }
   if(!webKey){ if(onErr)onErr(new Error('no key')); return; }
   var p=webProvider||'tavily';
   try{
