@@ -10,7 +10,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="포도야">
 <title>Podoya 🍇</title>
-<!-- build: stt-puter-fast -->
+<!-- build: stt-fast2 -->
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{overflow-x:hidden;max-width:100vw}
@@ -4585,7 +4585,7 @@ window.onSttEnd=function(){ _sttClearTimers(); sttResetMic(); var el=document.ge
    그래서 그걸 안 쓴다. 마이크를 열어 녹음하고, 소리 크기로 말 끝을 판단해 잘라
    Gemini에게 보내 글자로 받는다. 시스템을 부르는 일이 없으니 소리도 없다.
    Gemini 키가 없으면 예전 방식(음성인식)으로 그대로 돌아간다. */
-var REC_SILENCE=520;   /* 이만큼 조용하면 한 문장 끝 */
+var REC_SILENCE=400;   /* 이만큼 조용하면 한 문장 끝 */
 var REC_MINSPK=300;     /* 최소 이만큼은 말해야 인정 */
 var REC_MAX=12000;      /* 최대 녹음 길이 */
 var REC_LEVEL=0.012;    /* 말인지 잡음인지 가르는 소리 크기 */
@@ -4782,7 +4782,7 @@ function _recStart(targetId, micId, idleHtml, listeningHtml){
       _rec.an=_rec.ac.createAnalyser(); _rec.an.fftSize=1024; src.connect(_rec.an);
     }catch(e){ _rec.an=null; }
     var mime=_recMime();
-    var mopt = mime ? {mimeType:mime, audioBitsPerSecond:24000} : {audioBitsPerSecond:24000};
+    var mopt = mime ? {mimeType:mime, audioBitsPerSecond:16000} : {audioBitsPerSecond:16000};
     try{ _rec.mr = new MediaRecorder(stream, mopt); }
     catch(e){ try{ _rec.mr = mime ? new MediaRecorder(stream,{mimeType:mime}) : new MediaRecorder(stream); }catch(e2){ _rec.active=false; window._stt.listening=false; sttResetMic(); showToast('녹음을 시작할 수 없어요.','rgba(0,0,0,.85)'); return; } }
     _rec.chunks=[];
@@ -4820,7 +4820,7 @@ function _recStart(targetId, micId, idleHtml, listeningHtml){
 }
 
 function sttStart(targetId, micId, idleHtml, listeningHtml, autoRunFn){
-  if(window._stt.listening){ sttStop(); return; }
+  if(window._stt.listening){ if(_rec.active){ _recCut(); return; } sttStop(); return; }   /* 녹음 중 재탭 = 지금 끝내고 보내기 */
   _sttClearTimers(); _sttAborted=false;
   window._sttAutoRun=autoRunFn||null;
   window._stt.target=targetId; window._stt.mic=micId; window._stt.idle=idleHtml;
@@ -5553,7 +5553,20 @@ function routineIntent(t){
   return score>=thr ? best : null;
 }
 function routeById(id){ var A=allRoutes(); for(var i=0;i<A.length;i++){ if(A[i].id===id) return A[i]; } return null; }
-function applyRoute(r, q){ var enc=encodeURIComponent(q||''); return { label:r.label, url:(r.url||'').replace('{q}',enc), deep:(r.deep||'').replace('{q}',enc), isApp:!!r.deep, native:r.native||'' }; }
+/* 지도앱은 문장을 못 알아듣는다. "자갈치 시장 가는 길 알려줘" → "자갈치 시장" 으로 줄인다. */
+function naviClean(q){
+  var t=String(q||'').trim();
+  t=t.replace(/[?？!！.。]+$/g,'');
+  t=t.replace(/^(나\s*|우리\s*|여기서\s*|지금\s*|일단\s*)+/,'');
+  /* 뒤에 붙는 명령·부탁 말들을 반복해서 떼어낸다 */
+  var tail=/(\s*(으로|로|까지|에)?\s*(가는\s*길|가는길|길찾기|길 찾기|길안내|길 안내|내비|네비|경로)?\s*(좀|한번|한 번)?\s*(알려\s*줘|알려\s*주세요|찾아\s*줘|찾아\s*주세요|검색해\s*줘|안내해\s*줘|안내\s*좀|보여\s*줘|데려다\s*줘|가\s*줘|가자|가고\s*싶어|어떻게\s*가|어디야|어디니|어디에\s*있어|해\s*줘|해\s*주세요|부탁해)\s*$)/;
+  for(var i=0;i<4;i++){ var b=t; t=t.replace(tail,'').trim(); if(t===b) break; }
+  /* 명령어를 다 떼서 "가는 길"만 남는 경우 방지 */
+  t=t.replace(/\s*(가는\s*길|가는길|길찾기|길안내|내비|네비|경로)\s*$/,'').trim();
+  t=t.replace(/[,、]\s*$/,'').trim();
+  return t || String(q||'').trim();
+}
+function applyRoute(r, q){ if(r && r.id==='navi') q=naviClean(q); var enc=encodeURIComponent(q||''); return { label:r.label, url:(r.url||'').replace('{q}',enc), deep:(r.deep||'').replace('{q}',enc), isApp:!!r.deep, native:r.native||'' }; }
 var VOICE_PREFIX='voiceact';
 function vEl(suffix){ return document.getElementById(VOICE_PREFIX+'-'+suffix); }
 function openVoiceAct(){
@@ -8783,7 +8796,7 @@ function voiceOverview(px){
 /* ===== 내비 길안내 새 창 (AI 개요 + 자동 시작) ===== */
 var naviDest='', naviUrl='', naviTimer=null, naviTick=null, naviStarted=false;
 function openNavi(dest, url){
-  naviDest=dest||''; naviUrl=url||''; naviStarted=false;
+  naviDest=naviClean(dest||''); naviUrl=url||''; naviStarted=false;
   if(naviTimer){clearTimeout(naviTimer);naviTimer=null;} if(naviTick){clearInterval(naviTick);naviTick=null;}
   var t=document.getElementById('navi-title'); if(t) t.textContent=naviDest||'목적지';
   var note=document.getElementById('navi-note'); if(note) note.textContent='';
