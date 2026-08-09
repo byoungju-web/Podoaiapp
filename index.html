@@ -10,7 +10,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="포도야">
 <title>Podoya 🍇</title>
-<!-- build: navi-clean2 -->
+<!-- build: music-fix -->
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{overflow-x:hidden;max-width:100vw}
@@ -5215,8 +5215,15 @@ function _ptBigrams(s){ s=_ptNorm(s); var o={}; if(s.length<2){ if(s) o[s]=1; re
 function _ptDice(a,b){ var A=_ptBigrams(a),B=_ptBigrams(b),ka=Object.keys(A),kb=Object.keys(B); if(!ka.length||!kb.length) return 0; var n=0; for(var i=0;i<ka.length;i++){ if(B[ka[i]]) n++; } return 2*n/(ka.length+kb.length); }
 function podotalkRooms(){ try{ var a=JSON.parse(localStorage.getItem('pododa_talk_rooms')||'[]'); return Array.isArray(a)?a:[]; }catch(e){ return []; } }
 var PT_KW=/포도톡|포톡|포도\s*톡|podotalk|potalk|포토크|톡방|채팅방|오픈\s*채팅|일반\s*채팅|대화방|단톡|채팅\s*방|톡\s*열/i;
+/* "유튜브에서 000 노래 틀어줘" 같은 재생 요청은 포도톡 방 이름과 겹쳐도 방으로 보내면 안 된다 */
+function _isPlayReq(t){
+  t=String(t||'');
+  if(/(톡|채팅|대화방|단톡|오픈방|방에|방으로|보내|전송|전달)/.test(t)) return false;   /* 진짜 방 요청은 통과 */
+  return /(틀어|재생|플레이|들려|듣고\s*싶)/.test(t) || /(유튜브|유툽|유투브|youtube)/i.test(t);
+}
 function podotalkIntent(t){
   t=String(t||''); var rooms=podotalkRooms(); if(!rooms.length) return null;
+  if(_isPlayReq(t)) return null;
   var hasKw=PT_KW.test(t);
   /* 방 이름 후보: 메시지/보내 앞부분에서 "○○방"의 ○○를 우선 추출 */
   var head=t.split(/메시지\s*[:：]|라고|보내|전송|입력해|톡\s*해/)[0];
@@ -5230,7 +5237,7 @@ function podotalkIntent(t){
   for(var i=0;i<rooms.length;i++){
     var nm=_ptNorm(rooms[i].name); if(!nm) continue;
     var s=Math.max(_ptDice(cand, rooms[i].name), _ptDice(head, rooms[i].name));
-    if(nq && (nm.indexOf(nq)>=0 || nq.indexOf(nm)>=0)) s=Math.max(s,0.95);
+    if(nq && nm.length>=2 && nq.length>=2 && (nm.indexOf(nq)>=0 || nq.indexOf(nm)>=0)) s=Math.max(s,0.95);
     if(s>score){ score=s; best=rooms[i]; }
   }
   if(!best) return null;
@@ -6527,7 +6534,7 @@ function showFeatureGuide(){
   var _c=_cc(), _isKR=(_c==='KR');
   /* 마지막 원소 = 노출 국가: '*' 전세계 · 'KR' 한국 전용 · 'US' 미국 전용 */
   var G=[
-    ['🎵','유튜브 노래','유튜브에서 나훈아 노래 틀어줘','유튜브에서 그 노래를 바로 재생','#e11d48','*'],
+    ['🎵','유튜브 노래','유튜브에서 000 노래 틀어줘','유튜브에서 그 노래를 바로 재생','#e11d48','*'],
     ['🗺️','길 안내·내비','강남역 길 안내해줘',(_isKR?'네이버지도로 길찾기':'구글지도로 길찾기'),'#16a34a','*'],
     ['🍽️','음식점·맛집','근처 국밥집 찾아줘','지도·검색으로 주변 맛집 안내','#ea580c','*'],
     ['📍','가볼 만한 곳','가볼 만한 곳 추천해줘','AI가 주변 명소·나들이 추천','#0e7490','*'],
@@ -6539,12 +6546,12 @@ function showFeatureGuide(){
     ['🛒','쇼핑','○○ 최저가 검색해줘','Amazon · Walmart · Target에서 검색','#f59e0b','US'],
     ['🚕','택시','택시 불러줘','카카오T로 호출','#d97706','KR'],
     ['🚕','택시','택시 불러줘','Uber로 호출','#d97706','US'],
-    ['📞','전화','김사장한테 전화','저장된 연락처로 다이얼러 열기','#2563eb','*'],
-    ['💬','문자','김사장한테 늦는다고 문자','내용까지 채워서 문자앱 열기','#0891b2','*'],
-    ['💛','카톡','김사장한테 안녕이라고 카톡','메시지 복사 + 카톡 열기<br><span style="color:#8a7f00">· 오픈채팅방: 링크 저장하면 "○○ 오픈카톡방 열어줘"로 그 방 직행</span>','#eab308','KR'],
+    ['📞','전화','000한테 전화','저장된 연락처로 다이얼러 열기','#2563eb','*'],
+    ['💬','문자','000한테 늦는다고 문자','내용까지 채워서 문자앱 열기','#0891b2','*'],
+    ['💛','카톡','000한테 안녕이라고 카톡','메시지 복사 + 카톡 열기<br><span style="color:#8a7f00">· 오픈채팅방: 링크 저장하면 "○○ 오픈카톡방 열어줘"로 그 방 직행</span>','#eab308','KR'],
     ['✈️','텔레그램','코인방 텔레그램 열어줘','방 링크·@아이디를 저장하면 그 방으로 바로 직행','#0ea5e9','*'],
-    ['💸','송금·페이','김사장한테 2만원 토스로 보내줘','토스: 계좌·금액까지 자동 입력<br><span style="color:#5b6178">· 네이버페이·카카오페이: 앱으로 열어 송금(앱 없으면 웹)</span>','#10b981','KR'],
-    ['📅','일정 등록','내일 3시 김사장 미팅 잡아줘','구글 캘린더에 제목·시간 자동 입력','#6366f1','*'],
+    ['💸','송금·페이','000한테 2만원 토스로 보내줘','토스: 계좌·금액까지 자동 입력<br><span style="color:#5b6178">· 네이버페이·카카오페이: 앱으로 열어 송금(앱 없으면 웹)</span>','#10b981','KR'],
+    ['📅','일정 등록','내일 3시 000 미팅 잡아줘','구글 캘린더에 제목·시간 자동 입력','#6366f1','*'],
     ['🔗','내 관리 페이지','스마트스토어 관리자 열어줘',(_isKR?'스마트스토어·배민 사장님 등 링크 저장 → 반복 접속 직행':'자주 쓰는 관리자 주소를 저장 → 반복 접속 직행'),'#14b8a6','*']
   ].filter(function(g){ return g[5]==='*' || g[5]===_c; });
   var html='<div style="font-size:19px;font-weight:900;color:#0a7a96;margin:2px 0 4px">📋 이렇게 말해보세요</div>'
