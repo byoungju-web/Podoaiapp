@@ -10,7 +10,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="포도야">
 <title>Podoya 🍇</title>
-<!-- build: music-fix -->
+<!-- build: license -->
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{overflow-x:hidden;max-width:100vw}
@@ -635,6 +635,61 @@ body{background:#f4f5fa;display:flex;justify-content:center;min-height:100vh;fon
       <div class="my-avatar" style="background:#fff;overflow:hidden"><svg width="60" height="60" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg" style="display:block"><rect x="5" y="5" width="502" height="502" rx="118" fill="#fff" stroke="#ececec" stroke-width="10"/><path d="M256 152c-20-22-46-28-46-50 0-16 14-24 26-18 8 4 16 12 20 20 4-8 12-16 20-20 12-6 26 2 26 18 0 22-26 28-46 50z" fill="#4CC96E"/><circle cx="196" cy="308" r="74" fill="#7C4DEA" stroke="#5B21B6" stroke-width="15"/><circle cx="320" cy="316" r="90" fill="#A78BFA" stroke="#5B21B6" stroke-width="15"/></svg></div>
       <div class="my-name">Podoya 사용자</div>
       <div class="my-sub" id="my-api-status">AI 모델 미설정</div>
+    </div>
+
+    <!-- 무료 / 유료 경계선 -->
+    <div style="font-size:12px;font-weight:800;color:#1f2430;letter-spacing:1px;padding:0 4px 6px">&#128200; 어디까지 무료인가요?</div>
+    <div class="my-card" style="padding:0;overflow:hidden;margin-bottom:12px">
+
+      <div style="background:#eafaf1;border-bottom:1px solid rgba(0,0,0,.08);padding:14px 16px">
+        <div style="font-size:14px;font-weight:900;color:#0b8f5e;margin-bottom:3px">&#128994; 무료 &mdash; 그냥 쓰면 됩니다</div>
+        <div style="font-size:11.5px;color:#3f6b57;line-height:1.6;margin-bottom:10px">키도 결제도 필요 없어요. 포도야 기능의 대부분이 여기 있습니다.</div>
+        <div style="font-size:12.5px;color:#1f2430;line-height:2">
+          &#8226; <b>포도야 대화</b> — 키 없이 무제한 (Puter)<br>
+          &#8226; <b>지도 &middot; 내비 &middot; 길찾기 &middot; 날씨</b><br>
+          &#8226; <b>전화 &middot; 문자 &middot; 카톡 &middot; 토스 &middot; 유튜브 &middot; 배달 &middot; 기차</b><br>
+          &#8226; <b>말하기</b> — 브라우저 음성인식 (&quot;띡&quot; 소리 남)<br>
+          &#8226; <b>포도톡 &middot; 백업/복원 &middot; 알림</b>
+        </div>
+        <div style="margin-top:10px;font-size:11px;color:#3f6b57;line-height:1.6">
+          전화 &middot; 카톡 &middot; 배달 같은 건 앱을 바로 열어주는 방식이라 서버를 쓰지 않아요. 그래서 아무리 써도 돈이 들지 않습니다.
+        </div>
+      </div>
+
+      <div style="background:#fff7ed;padding:14px 16px">
+        <div style="font-size:14px;font-weight:900;color:#c2410c;margin-bottom:3px">&#128993; 유료 &mdash; 키가 있어야 하는 것</div>
+        <div style="font-size:11.5px;color:#9a3412;line-height:1.6;margin-bottom:10px">쓸 때마다 실제로 돈이 나가는 기능이에요. 아래 &lsquo;API 키 관리&rsquo;에 본인 키를 넣으면 열립니다.</div>
+        <div style="font-size:12.5px;color:#1f2430;line-height:2">
+          &#8226; <b>고품질 대화</b> — 에이전트팀 &middot; 문서 작성 &middot; 리서치<br>
+          &nbsp;&nbsp;&nbsp;<span style="font-size:11px;color:#9a3412">Claude &middot; Gemini 키</span><br>
+          &#8226; <b>실시간 웹검색</b> — 최신 정보 &middot; 출처 표시<br>
+          &nbsp;&nbsp;&nbsp;<span style="font-size:11px;color:#9a3412">웹검색 키</span><br>
+          &#8226; <b>조용하고 빠른 받아쓰기</b> — &quot;띡&quot; 소리 없음<br>
+          &nbsp;&nbsp;&nbsp;<span style="font-size:11px;color:#9a3412">Deepgram 키</span>
+        </div>
+        <div style="margin-top:10px;font-size:11px;color:#9a3412;line-height:1.6">
+          요금은 <b>본인 계정에서</b> 나갑니다. 포도야가 대신 받지 않아요. 키를 안 넣어도 위의 무료 기능은 전부 그대로 쓸 수 있습니다.
+        </div>
+      </div>
+
+    </div>
+
+    <!-- 이용권 -->
+    <div style="font-size:12px;font-weight:800;color:#1f2430;letter-spacing:1px;padding:0 4px 6px">&#127903;&#65039; 이용권</div>
+    <div class="my-card" style="padding:16px;margin-bottom:12px">
+      <div id="lic-card">
+        <div style="font-size:13px;color:#5b6178;line-height:1.7">불러오는 중…</div>
+      </div>
+      <div style="margin-top:12px">
+        <div style="display:flex;gap:8px">
+          <input id="lic-input" placeholder="PODO-XXXX-XXXX" autocomplete="off" spellcheck="false"
+            style="flex:1;background:#eef0f7;border:1.5px solid rgba(0,0,0,.28);border-radius:11px;padding:11px 12px;color:#141720;font-size:14px;outline:none;font-family:monospace;text-transform:uppercase">
+          <button onclick="licSave()" style="flex:0 0 auto;background:linear-gradient(135deg,#a855f7,#6d28d9);border:none;border-radius:11px;padding:11px 16px;color:#fff;font-size:13.5px;font-weight:800;cursor:pointer;font-family:inherit">등록</button>
+        </div>
+        <div style="font-size:11px;color:#5b6178;margin-top:8px;line-height:1.6">
+          이용권이 있으면 <b>고품질 대화 &middot; 웹검색 &middot; 조용한 받아쓰기</b>를 본인 키 없이 쓸 수 있어요. 없어도 무료 기능은 그대로입니다.
+        </div>
+      </div>
     </div>
 
     <!-- AI 사용 방식 -->
@@ -1536,6 +1591,7 @@ function secAfterUnlock(){
   try{ apiKey=lsG('podoai_k',''); }catch(e){}
   try{ geminiKey=lsG('podoai_gk',''); }catch(e){}
   try{ dgKey=lsG('podoai_dg',''); }catch(e){}
+  try{ licCode=lsG('podoai_lic',''); }catch(e){}
   try{ webKey=lsG('podoai_wsk',''); }catch(e){}
   try{ if(typeof updateMyStatus==='function') updateMyStatus(); }catch(e){}
   try{ if(typeof refreshLauncher==='function') refreshLauncher(); }catch(e){}
@@ -1697,7 +1753,9 @@ function callAI(opts, onSuccess, onError){
 }
 
 function routeUserAI(opts, onSuccess, onError){
-  if(aiModel === 'puter'){
+  if(licForAI()){                       /* 🎟️ 이용권 — 본인 키가 없을 때만 */
+    callPodo(opts, onSuccess, onError);
+  } else if(aiModel === 'puter'){
     callPuter(opts, onSuccess, onError);
   } else if(aiModel === 'gemini' && geminiKey){
     callGemini(opts, onSuccess, onError);
@@ -1769,6 +1827,101 @@ function callPuter(opts, onSuccess, onError){
   }
 }
 
+/* ══ 🎟️ 이용권 — 대표키를 워커 뒤에 두고 코드로 쓴다 ══
+   코드가 있으면 고품질 대화·받아쓰기가 워커를 거친다.
+   본인 키가 있으면 본인 키가 먼저다(한도 없음). 둘 다 없으면 무료(Puter). */
+var PODO_API = 'https://podoya-api.hasin7jk.workers.dev';
+var licCode = lsG('podoai_lic','');
+var licInfo = null;   /* {plan, expires, expired, left:{chat,search,stt}} */
+
+function licActive(){ return !!licCode && !(licInfo && licInfo.expired); }
+/* 이용권으로 AI를 돌릴 상황인가 — 본인 키가 있으면 그쪽이 우선 */
+function licForAI(){ return licActive() && !apiKey && !(aiModel==='gemini' && geminiKey); }
+
+function licFetchStatus(cb){
+  if(!licCode){ licInfo=null; if(cb) cb(null); return; }
+  fetch(PODO_API+'/api/status?code='+encodeURIComponent(licCode))
+    .then(function(r){ return r.json(); })
+    .then(function(d){ licInfo = (d && d.ok) ? d : null; if(cb) cb(licInfo); })
+    ['catch'](function(){ if(cb) cb(null); });
+}
+
+/* 워커를 거쳐 고품질 대화 */
+function callPodo(opts, onSuccess, onError){
+  fetch(PODO_API+'/api/chat',{
+    method:'POST',
+    headers:{'Content-Type':'application/json','X-Podo-Code':licCode},
+    body:JSON.stringify({
+      system: opts.system || '',
+      messages: opts.messages,
+      max_tokens: opts.maxTokens || 500
+    })
+  }).then(function(r){
+    return r.json().then(function(d){ return {s:r.status, d:d}; });
+  }).then(function(res){
+    var d=res.d;
+    if(res.s===402){                       /* 한도·만료 */
+      if(licInfo) licInfo.left = licInfo.left || {};
+      onError(new Error('LIC:'+(d.error||'이용권 한도를 다 썼어요')));
+      licFetchStatus(function(){ try{ licRenderCard(); }catch(e){} });
+      return;
+    }
+    if(!d || d.error) throw new Error((d&&d.error)||'응답을 받지 못했어요');
+    if(licInfo && licInfo.left && typeof d.left==='number') licInfo.left.chat = d.left;
+    try{ licRenderCard(); }catch(e){}
+    onSuccess((d.text||'').trim());
+  })['catch'](onError);
+}
+
+function licRenderCard(){
+  var el=document.getElementById('lic-card'); if(!el) return;
+  var inp=document.getElementById('lic-input');
+  if(inp && !inp.value) inp.value=licCode||'';
+
+  if(!licCode){
+    el.innerHTML='<div style="font-size:13.5px;font-weight:800;color:#1f2430">등록된 이용권이 없어요</div>'
+      +'<div style="font-size:12px;color:#5b6178;margin-top:5px;line-height:1.6">지금은 무료 기능만 쓰고 있어요. 코드를 받으셨다면 아래에 넣어 주세요.</div>';
+    return;
+  }
+  if(!licInfo){
+    el.innerHTML='<div style="font-size:13.5px;font-weight:800;color:#c2410c">이용권을 확인하지 못했어요</div>'
+      +'<div style="font-size:12px;color:#9a3412;margin-top:5px;line-height:1.6">코드가 맞는지, 인터넷이 되는지 확인해 주세요.</div>'
+      +'<button onclick="licRefresh()" style="margin-top:10px;padding:9px 14px;border-radius:10px;border:1px solid rgba(0,0,0,.2);background:#fff;color:#1f2430;font-size:12.5px;cursor:pointer;font-family:inherit">다시 확인</button>';
+    return;
+  }
+  var L=licInfo.left||{}, T=licInfo.todayUsed||{}, C=licInfo.dailyCap||{};
+  if(licInfo.expired){
+    el.innerHTML='<div style="font-size:13.5px;font-weight:800;color:#c2410c">이용권이 만료됐어요</div>'
+      +'<div style="font-size:12px;color:#9a3412;margin-top:5px;line-height:1.6">'+_agentEsc(licInfo.expires)+' 까지였어요. 무료 기능은 계속 쓸 수 있어요.</div>';
+    return;
+  }
+  var bar=function(name, left, used, cap){
+    return '<div style="display:flex;justify-content:space-between;font-size:12.5px;color:#1f2430;line-height:2">'
+      +'<span>'+name+'</span><span><b>'+(left||0)+'</b> 남음'
+      +(cap?' <span style="color:#8a90a6">· 오늘 '+(used||0)+'/'+cap+'</span>':'')+'</span></div>';
+  };
+  el.innerHTML='<div style="display:flex;align-items:center;gap:7px">'
+      +'<span style="font-size:13.5px;font-weight:800;color:#6d28d9">'+_agentEsc(licInfo.plan)+' 이용권</span>'
+      +'<span style="font-size:11px;color:#7c6aa8">'+_agentEsc(licInfo.expires)+' 까지</span></div>'
+    +'<div style="margin-top:9px;border-top:1px solid rgba(0,0,0,.08);padding-top:8px">'
+      +bar('고품질 대화', L.chat, T.chat, C.chat)
+      +bar('웹검색', L.search, T.search, C.search)
+      +bar('받아쓰기', L.stt, T.stt, C.stt)
+    +'</div>';
+}
+function licRefresh(){ licFetchStatus(function(){ licRenderCard(); }); }
+function licSave(){
+  var inp=document.getElementById('lic-input');
+  var v=((inp&&inp.value)||'').trim().toUpperCase();
+  if(!v){ licCode=''; lsS('podoai_lic',''); licInfo=null; licRenderCard(); showToast('이용권을 지웠어요','rgba(0,0,0,.85)'); return; }
+  licCode=v; lsS('podoai_lic',v); licInfo=null;
+  licRenderCard();
+  licFetchStatus(function(info){
+    licRenderCard();
+    showToast(info ? ('🎟️ '+info.plan+' 이용권을 등록했어요') : '이용권을 확인하지 못했어요','rgba(0,0,0,.85)');
+  });
+}
+
 function callClaude(opts, onSuccess, onError){
   fetch('https://api.anthropic.com/v1/messages',{
     method:'POST',
@@ -1838,11 +1991,18 @@ function callGemini(opts, onSuccess, onError){
 }
 
 /* AI 없을 때 안내 메시지 */
+/* 이용권 한도에 걸렸을 때 보여줄 말 */
+function licLimitMsg(e){
+  var m=String((e&&e.message)||'');
+  if(m.indexOf('LIC:')!==0) return null;
+  return '🎟️ '+m.slice(4)+'\n무료 기능(지도·전화·카톡·포도야 대화)은 그대로 쓸 수 있어요.';
+}
 function getNoKeyMsg(){
   return '🆓 무료로 바로 쓰려면 마이 탭에서 "키 없이 무료(Puter)"를 켜거나 무료 Gemini 키를 넣어줘.\n💎 더 강력하게(웹검색·고품질)는 본인 유료 키 — 요금은 본인 부담이에요.';
 }
 
 function hasAIKey(){
+  if(typeof licActive==='function' && licActive()) return true;   // 🎟️ 이용권
   if(aiModel === 'puter') return true;                            // 키리스
   if(aiModel === 'gemini') return !!geminiKey;
   return !!apiKey;
@@ -4684,7 +4844,7 @@ var _recOff=false;   /* Gemini 받아쓰기가 전부 실패하면 이번 세션
 function _recAvail(){
   try{
     if(_recOff) return false;
-    if(!dgKey) return false;                           /* 키 없으면 원래 음성인식(빠름) 그대로 */
+    if(!dgKey && !licActive()) return false;           /* 키도 이용권도 없으면 원래 음성인식 */
     if(!(window.MediaRecorder && navigator.mediaDevices && navigator.mediaDevices.getUserMedia)) return false;
     return true;                                       /* Deepgram — 조용하고 빠름 */
   }catch(e){ return false; }
@@ -4816,6 +4976,24 @@ function _recSendPuter(blob, onFail){
     _recApply(t);
   })['catch'](function(e){ if(over) return; over=true; clearTimeout(to); onFail((e&&(e.message||e.error))||'Puter 실패'); });
 }
+/* 이용권으로 받아쓰기 — 워커가 대신 딥그램을 부른다 */
+function _recSendLic(blob, onFail){
+  var over=false, to=setTimeout(function(){ if(!over){ over=true; onFail('시간 초과'); } }, 8000);
+  var lang=''; try{ lang=_dgLang(); }catch(e){ lang='ko'; }
+  fetch(PODO_API+'/api/stt?lang='+encodeURIComponent(lang),{
+    method:'POST',
+    headers:{'X-Podo-Code':licCode,'Content-Type':(blob.type||'audio/webm')},
+    body:blob
+  }).then(function(r){ return r.json().then(function(d){ return {s:r.status,d:d}; }); })
+    .then(function(res){
+      if(over) return; over=true; clearTimeout(to);
+      var d=res.d;
+      if(res.s===402){ showToast('🎤 '+((d&&d.error)||'받아쓰기 한도를 다 썼어요'),'rgba(0,0,0,.85)'); onFail('quota'); return; }
+      if(!d || !d.text){ onFail((d&&d.error)||'빈 결과'); return; }
+      if(licInfo && licInfo.left && typeof d.left==='number') licInfo.left.stt=d.left;
+      _recApply(d.text);
+    })['catch'](function(){ if(over) return; over=true; clearTimeout(to); onFail('연결 실패'); });
+}
 function _recToSR(){
   /* 받아쓰기가 전부 막히면 예전 음성인식으로 (소리는 나지만 확실히 된다) */
   _recOff=true; sttResetMic();
@@ -4828,7 +5006,8 @@ function _recSend(blob){
   var mb=document.getElementById(window._stt.mic);
   if(!blob || blob.size<2000){ sttResetMic(); window._sttAutoRun=null; showToast('🎤 잘 안 들렸어요. 다시 말해주세요','rgba(0,0,0,.85)'); return; }
   if(mb) mb.innerHTML='&#9203; 옮기는 중…';
-  if(dgKey){ _recSendDg(blob, function(){ _recToSR(); }); return; }   /* 실패하면 원래 음성인식으로 */
+  if(dgKey){ _recSendDg(blob, function(){ _recToSR(); }); return; }   /* 본인 키 우선 */
+  if(licActive()){ _recSendLic(blob, function(){ _recToSR(); }); return; }
   _recToSR();
 }
 function _recSendGemini(blob){
@@ -7806,6 +7985,10 @@ function vansRenderWeb(d, err){
   ai.appendChild(vansWarn());
 }
 function callAIStream(opts, onDelta, onDone, onError){
+  if(typeof licForAI==='function' && licForAI()){   /* 🎟️ 이용권은 통째로 받아서 한 번에 보여준다 */
+    callPodo(opts, function(t){ if(t) onDelta(t); onDone(t); }, onError);
+    return;
+  }
   opts=opts||{};
   if(!opts.noLang){ var _s=_aiLangSuffix(); if(_s) opts.system=(opts.system||'')+_s; }
   if(aiModel==='puter'){ puterStream(opts,onDelta,onDone,onError); }
@@ -10580,6 +10763,7 @@ function updateMyStatus(){
   if(gs) gs.textContent=geminiKey?'✅ 등록됨':'미등록 (무료 발급 가능)';
   try{ webKeyStatus(); }catch(e){}
   try{ dgKeyStatus(); }catch(e){}
+  try{ licRenderCard(); licRefresh(); }catch(e){}
   try{ kakaoKeyStatus(); }catch(e){}
   try{ proxyUrlStatus(); }catch(e){}
   // 언어 칩 상태도 갱신
