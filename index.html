@@ -10,7 +10,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="포도야">
 <title>Podoya 🍇</title>
-<!-- build: stt-sr-default -->
+<!-- build: navi-clean2 -->
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{overflow-x:hidden;max-width:100vw}
@@ -5691,12 +5691,15 @@ function routeById(id){ var A=allRoutes(); for(var i=0;i<A.length;i++){ if(A[i].
 function naviClean(q){
   var t=String(q||'').trim();
   t=t.replace(/[?？!！.。]+$/g,'');
-  t=t.replace(/^(나\s*|우리\s*|여기서\s*|지금\s*|일단\s*)+/,'');
+  t=t.replace(/^(나\s*|우리\s*|여기서\s*|지금\s*|일단\s*|저기\s*)+/,'');
   /* 뒤에 붙는 명령·부탁 말들을 반복해서 떼어낸다 */
-  var tail=/(\s*(으로|로|까지|에)?\s*(가는\s*길|가는길|길찾기|길 찾기|길안내|길 안내|내비|네비|경로)?\s*(좀|한번|한 번)?\s*(알려\s*줘|알려\s*주세요|찾아\s*줘|찾아\s*주세요|검색해\s*줘|안내해\s*줘|안내\s*좀|보여\s*줘|데려다\s*줘|가\s*줘|가자|가고\s*싶어|어떻게\s*가|어디야|어디니|어디에\s*있어|해\s*줘|해\s*주세요|부탁해)\s*$)/;
-  for(var i=0;i<4;i++){ var b=t; t=t.replace(tail,'').trim(); if(t===b) break; }
+  var VERB='(알려\\s*줘|알려\\s*주|알려\\s*줄래|알려\\s*주세요|알려\\s*다오|가르쳐\\s*줘|찾아\\s*줘|찾아\\s*주세요|찾아\\s*줄래|검색해\\s*줘|검색\\s*좀|안내해\\s*줘|안내\\s*좀|안내\\s*해|보여\\s*줘|보여\\s*주세요|데려다\\s*줘|데려다\\s*주세요|가\\s*줘|가자|가고\\s*싶어|어떻게\\s*가요|어떻게\\s*가|어디야|어디니|어디죠|어디\\s*있어|어디에\\s*있어|해\\s*줘|해\\s*주세요|부탁해|부탁드려요|알려)';
+  var PATH='(가는\\s*길|가는길|가는\\s*법|길\\s*찾기|길찾기|길\\s*안내|길안내|내비게이션|내비|네비게이션|네비|경로|위치|주소)';
+  var tail=new RegExp('\\s*(으로|로|까지|에)?\\s*'+PATH+'?\\s*(좀|한번|한\\s*번)?\\s*'+VERB+'\\s*$');
+  for(var i=0;i<5;i++){ var b=t; t=t.replace(tail,'').trim(); if(t===b) break; }
   /* 명령어를 다 떼서 "가는 길"만 남는 경우 방지 */
-  t=t.replace(/\s*(가는\s*길|가는길|길찾기|길안내|내비|네비|경로)\s*$/,'').trim();
+  t=t.replace(new RegExp('\\s*'+PATH+'\\s*$'),'').trim();
+  t=t.replace(/\s*(까지|으로|로|에)\s*$/,'').trim();       /* 남은 조사 */
   t=t.replace(/[,、]\s*$/,'').trim();
   return t || String(q||'').trim();
 }
@@ -7245,6 +7248,7 @@ function goNavi(q){
   try{ var rr=instantRoute(q); if(rr && rr.id==='navi' && rr.q) dest=rr.q; }catch(e){}
   if(!dest){ dest=String(q||'').replace(/(으?로\s*)?(길\s*안내|내비게이션|내비|네비게이션|네비|길\s*찾기|길찾기|가는\s*길|가는\s*법|어떻게\s*가(는|요|줘)?|찾아\s*가(줘|기)?|까지\s*가(줘|는|기)?|데려다\s*(줘)?|목적지|운전|틀어\s*줘?|켜\s*줘?|실행(해|해줘)?|시작(해|해줘)?|안내\s*해?\s*줘?|해\s*줘|좀)/g,'').replace(/\s+/g,' ').trim(); }
   if(!dest) dest=q;
+  dest=naviClean(dest);            /* 지도앱은 문장을 못 알아듣는다 — 장소 이름만 남긴다 */
   var done=false;
   var fb=setTimeout(function(){ if(done)return; done=true; _naviPlace(dest); }, 7000);
   _geocode(dest, function(lat,lng){
