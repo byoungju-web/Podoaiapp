@@ -10,7 +10,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="포도야">
 <title>Podoya 🍇</title>
-<!-- build: stt-revert -->
+<!-- build: stt-puter -->
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{overflow-x:hidden;max-width:100vw}
@@ -4585,7 +4585,7 @@ window.onSttEnd=function(){ _sttClearTimers(); sttResetMic(); var el=document.ge
    그래서 그걸 안 쓴다. 마이크를 열어 녹음하고, 소리 크기로 말 끝을 판단해 잘라
    Gemini에게 보내 글자로 받는다. 시스템을 부르는 일이 없으니 소리도 없다.
    Gemini 키가 없으면 예전 방식(음성인식)으로 그대로 돌아간다. */
-var REC_SILENCE=1100;   /* 이만큼 조용하면 한 문장 끝 */
+var REC_SILENCE=800;   /* 이만큼 조용하면 한 문장 끝 */
 var REC_MINSPK=300;     /* 최소 이만큼은 말해야 인정 */
 var REC_MAX=15000;      /* 최대 녹음 길이 */
 var REC_LEVEL=0.012;    /* 말인지 잡음인지 가르는 소리 크기 */
@@ -4597,6 +4597,7 @@ function _recAvail(){
   try{
     if(_recOff) return false;
     if(!(window.MediaRecorder && navigator.mediaDevices && navigator.mediaDevices.getUserMedia)) return false;
+    if(_puterSTT()) return true;                       /* Puter 받아쓰기 — 키도 할당량도 없다 */
     if(!(window.AudioContext||window.webkitAudioContext)) return false;
     return !!geminiKey;
   }catch(e){ return false; }
@@ -4686,10 +4687,43 @@ function _recGetModels(cb){
     })['catch'](function(){ fin(REC_MODELS); });
 }
 function _recShort(m){ m=String(m||''); return m.length>60 ? m.slice(0,60)+'…' : m; }
+function _puterSTT(){ try{ return (typeof puter!=='undefined') && puter.ai && typeof puter.ai.speech2txt==='function'; }catch(e){ return false; } }
+function _recApply(t){
+  t=String(t||'').replace(/\s+/g,' ').replace(/^["'`\s]+|["'`\s]+$/g,'').trim();
+  sttResetMic();
+  if(!t){ window._sttAutoRun=null; showToast('🎤 잘 안 들렸어요. 다시 말해주세요','rgba(0,0,0,.85)'); return; }
+  var el=document.getElementById(window._stt.target);
+  if(el){ el.value=t; try{ el.dispatchEvent(new Event('input')); }catch(e){} }
+  if(window._sttAutoRun){ var fn=window._sttAutoRun; window._sttAutoRun=null; setTimeout(fn, STT_AUTORUN_MS); }
+}
+/* Puter 받아쓰기 — 녹음한 파일을 그대로 넘긴다(형식 변환이 없어 빠르다) */
+function _recSendPuter(blob, onFail){
+  var over=false, to=setTimeout(function(){ if(!over){ over=true; onFail('시간 초과'); } }, 12000);
+  puter.ai.speech2txt(blob).then(function(r){
+    if(over) return; over=true; clearTimeout(to);
+    var t=(r && (r.text||r.transcript)) || (typeof r==='string'?r:'');
+    if(!t){ onFail('빈 결과'); return; }
+    _recApply(t);
+  })['catch'](function(e){ if(over) return; over=true; clearTimeout(to); onFail((e&&(e.message||e.error))||'Puter 실패'); });
+}
+function _recToSR(){
+  /* 받아쓰기가 전부 막히면 예전 음성인식으로 (소리는 나지만 확실히 된다) */
+  _recOff=true; sttResetMic();
+  var run=window._sttAutoRun; window._sttAutoRun=null;
+  showToast('🎤 받아쓰기가 안 돼요 · 다시 말해주세요','rgba(0,0,0,.85)');
+  var t=window._stt.target, m=window._stt.mic, i=window._stt.idle, l=window._stt.listen||i;
+  setTimeout(function(){ try{ sttStart(t,m,i,l,run); }catch(e){} }, 900);
+}
 function _recSend(blob){
   var mb=document.getElementById(window._stt.mic);
   if(!blob || blob.size<2000){ sttResetMic(); window._sttAutoRun=null; showToast('🎤 잘 안 들렸어요. 다시 말해주세요','rgba(0,0,0,.85)'); return; }
   if(mb) mb.innerHTML='&#9203; 옮기는 중…';
+  if(_puterSTT()){ _recSendPuter(blob, function(){ _recSendGemini(blob); }); return; }
+  _recSendGemini(blob);
+}
+function _recSendGemini(blob){
+  var mb=document.getElementById(window._stt.mic);
+  if(!geminiKey || !(window.AudioContext||window.webkitAudioContext)){ _recToSR(); return; }
   var fail=function(m){ sttResetMic(); window._sttAutoRun=null; showToast('🎤 '+_recShort(m||'음성을 옮기지 못했어요'),'rgba(0,0,0,.85)'); };
   var giveUp=function(lastErr){
     /* Gemini 받아쓰기가 막혔다 → 이번 세션은 예전 음성인식으로 돌리고, 바로 다시 듣는다 */
@@ -4797,6 +4831,8 @@ function sttStart(targetId, micId, idleHtml, listeningHtml, autoRunFn){
     catch(e){ sttResetMic(); showToast('음성 입력을 시작할 수 없어요.','rgba(0,0,0,.85)'); }
     return;
   }
+  /* 🔇 녹음 방식 — 안드로이드 음성인식을 안 부르니 "띡" 소리가 없다 */
+  if(_recAvail()){ _recStart(targetId, micId, idleHtml, listeningHtml); return; }
   var SR=window.SpeechRecognition||window.webkitSpeechRecognition;
   if(!SR){ showToast('이 기기는 음성 입력을 지원하지 않아요. 글로 적어 주세요.','rgba(0,0,0,.85)'); return; }
   // 단일 연속 세션 + 1초 침묵 자동 종료: 인식기를 재시작하지 않으므로 "띠릭 띠릭" 반복 비프음이 없고, 말 멈추면 1초 뒤 바로 실행.
