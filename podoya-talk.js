@@ -21,7 +21,7 @@
 (function () {
   "use strict";
 
-  var PTL_VER = "2";
+  var PTL_VER = "3";
 
   /* ── 설정 ────────────────────────────────────────────────── */
   var API  = "https://podotalk-api.hasin7jk.workers.dev";  /* 워커 */
@@ -84,8 +84,11 @@
 
   /* ── 워커 호출 ────────────────────────────────────────────── */
   function api(path, body) {
-    var o = { method: body ? "POST" : "GET", headers: { "Content-Type": "application/json" } };
-    if (body) o.body = JSON.stringify(body);
+    /* GET 에 Content-Type 을 붙이면 브라우저가 예비 요청(preflight)을
+       한 번 더 보낸다. 안 붙이면 그 단계를 건너뛴다. */
+    var o = body
+      ? { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }
+      : { method: "GET" };
     return fetch(API + path, o).then(function (r) {
       /* 워커가 그 길을 모르면 HTML 을 뱉는다. 바로 .json() 하면
          엉뚱한 파싱 오류가 나므로 글로 먼저 받는다. */
@@ -94,7 +97,9 @@
         catch (e) { return { ok: false, error: "서버 응답을 읽지 못했어요 (" + r.status + ")" }; }
       });
     }).catch(function () {
-      return { ok: false, error: "포도톡 서버에 연결하지 못했어요" };
+      /* 여기로 오는 건 대부분 CORS 다. 포도톡 워커의 ALLOW_ORIGIN 에
+         podoya.ai.kr 이 없으면 브라우저가 응답을 막아버린다. */
+      return { ok: false, error: "서버에 닿지 못했어요 — 워커의 ALLOW_ORIGIN 에 " + location.origin + " 이 있는지 확인해 주세요", cors: 1 };
     });
   }
 
@@ -245,6 +250,19 @@
     if (el) el.innerHTML = listHtml();
   }
 
+  /* 토스트는 놓치기 쉽다. 연결 화면 안에도 결과를 남긴다. */
+  function note(text, bad) {
+    say(text);
+    var el = document.getElementById("ptl-msg");
+    if (!el) return;
+    el.style.display = "block";
+    el.style.cssText =
+      "display:block;margin-top:10px;border-radius:11px;padding:11px 12px;font-size:12.5px;line-height:1.6;" +
+      (bad ? "background:#fff5f5;border:1px solid #f3d0d0;color:#b03030"
+           : "background:#f0fdf4;border:1px solid #c8ead4;color:#15803d");
+    el.innerHTML = esc(text);
+  }
+
   window.podoyaTalkDefault = function (i) {
     var a = rooms();
     for (var k = 0; k < a.length; k++) a[k].def = (k === i) ? 1 : 0;
@@ -264,34 +282,34 @@
   window.podoyaTalkAdd = function () {
     var inp = document.getElementById("ptl-code");
     var code = ((inp && inp.value) || "").trim().toUpperCase().replace(/[^A-Z0-9]/g, "");
-    if (!code) { say("방 코드를 넣어주세요"); return; }
+    if (!code) { note("방 코드를 넣어주세요", 1); return; }
     var a = rooms();
     for (var i = 0; i < a.length; i++) {
-      if (a[i].code === code) { say("이미 연결된 방이에요"); return; }
+      if (a[i].code === code) { note("이미 연결된 방이에요", 1); return; }
     }
     var btn = document.getElementById("ptl-add");
     if (btn) { btn.disabled = true; btn.textContent = "확인 중…"; }
     api("/talk/room?code=" + encodeURIComponent(code)).then(function (d) {
       if (btn) { btn.disabled = false; btn.textContent = "연결"; }
-      if (!d || !d.ok || !d.room) { say((d && d.error) || "코드에 맞는 방이 없어요"); return; }
+      if (!d || !d.ok || !d.room) { note((d && d.error) || "코드에 맞는 방이 없어요", 1); return; }
       var a2 = rooms();
       a2.push({ id: d.room.id, code: code, name: d.room.name || "포도톡 방", def: a2.length ? 0 : 1 });
       saveRooms(a2);
       if (inp) inp.value = "";
       paint();
-      say("✅ " + (d.room.name || "방") + " 연결됨");
+      note("✅ " + (d.room.name || "방") + " 연결됨");
     });
   };
 
   window.podoyaTalkTest = function () {
     var d = defRoom();
-    if (!d) { say("먼저 방을 연결해 주세요"); return; }
+    if (!d) { note("먼저 방을 연결해 주세요", 1); return; }
     var btn = document.getElementById("ptl-test");
     if (btn) { btn.disabled = true; btn.textContent = "보내는 중…"; }
     sendParts(d.id, ["[포도야] 연결 확인용 시험 메시지입니다 ✅"]).then(function (r) {
       if (btn) { btn.disabled = false; btn.textContent = "테스트 발송"; }
-      if (r && r.stop) { say("실패: " + (r.error || "")); return; }
-      say("✅ 포도톡 \"" + d.name + "\" 방을 확인해 보세요");
+      if (r && r.stop) { note("실패: " + (r.error || ""), 1); return; }
+      note("✅ 포도톡 \"" + d.name + "\" 방을 확인해 보세요");
     });
   };
 
@@ -345,6 +363,8 @@
           'border:1px solid #dcdcdc;background:#fff;color:#111;font-size:13.5px;font-weight:700;' +
           'cursor:pointer;font-family:inherit">포도톡 열기</button>' +
       '</div>' +
+
+      '<div id="ptl-msg" style="display:none"></div>' +
 
       '<details style="margin-top:13px">' +
         '<summary style="font-size:12px;color:#888;cursor:pointer">방 코드는 어디서 받나요?</summary>' +
