@@ -21,7 +21,7 @@
 (function () {
   "use strict";
 
-  var PTL_VER = "1";
+  var PTL_VER = "2";
 
   /* ── 설정 ────────────────────────────────────────────────── */
   var API  = "https://podotalk-api.hasin7jk.workers.dev";  /* 워커 */
@@ -364,33 +364,63 @@
   };
 
   /* ── 발송 채널 설정 안에 "방 연결" 카드 끼워 넣기 ──────────── */
+  /* podoadvf-bg 라는 id 는 다른 고급기능 화면도 같이 쓴다. 그래서
+     제목이 "발송 채널" 일 때만 붙인다. 화면이 늦게 그려질 수 있어
+     몇 번 다시 확인한다. */
+  function hookCard(tries) {
+    var bg = document.getElementById("podoadvf-bg");
+    if (!bg || bg.children.length < 2) {
+      if (tries > 0) setTimeout(function () { hookCard(tries - 1); }, 120);
+      return;
+    }
+    if (document.getElementById("ptl-hook")) return;
+
+    /* 첫 아이는 머리말(제목 줄), 그 뒤가 내용 상자다 */
+    var head = bg.children[0];
+    var title = (head && (head.innerText || head.textContent) || "");
+    if (title.indexOf("발송 채널") < 0) return;   /* 다른 화면이면 붙이지 않는다 */
+
+    var w = null;
+    for (var i = 1; i < bg.children.length; i++) {
+      if (bg.children[i].nodeType === 1) { w = bg.children[i]; break; }
+    }
+    if (!w) {
+      if (tries > 0) setTimeout(function () { hookCard(tries - 1); }, 120);
+      return;
+    }
+
+    var d = defRoom(), n = rooms().length;
+    var box = document.createElement("div");
+    box.id = "ptl-hook";
+    box.style.cssText =
+      "background:#fff;border:1.5px solid " + (d ? "#c4b5fd" : "#f0d0a0") +
+      ";border-radius:14px;padding:14px;margin-bottom:12px";
+    box.innerHTML =
+      '<div style="font-size:14px;font-weight:800;color:#111">💬 포도톡 방 연결</div>' +
+      '<div style="font-size:12.5px;color:#999;margin-top:5px;line-height:1.6">' +
+        (d ? ('현재 <b>' + esc(d.name) + '</b> 방으로 갑니다' + (n > 1 ? (" 외 " + (n - 1) + "개 연결됨") : ""))
+           : '아직 연결 안 됨 — <b>연결해야 포도톡으로 갑니다</b>') +
+      '</div>' +
+      '<button onclick="podoyaTalkSetup()" style="width:100%;margin-top:11px;padding:11px;' +
+        'border-radius:11px;border:1px solid #dcdcdc;background:#fafafa;color:#111;font-size:13.5px;' +
+        'font-weight:700;cursor:pointer;font-family:inherit">' +
+        (d ? "방 관리" : "방 연결하기") + '</button>';
+    w.insertBefore(box, w.firstChild);
+  }
+
   var _origDeliver = window.openDeliverSettings;
   if (typeof _origDeliver === "function") {
     window.openDeliverSettings = function () {
       _origDeliver.apply(this, arguments);
-      setTimeout(function () {
-        var bg = document.getElementById("podoadvf-bg");
-        if (!bg) return;
-        var w = bg.querySelector("div[style*='padding:16px']") || bg.lastChild;
-        if (!w || w.querySelector("#ptl-hook")) return;
-        var d = defRoom(), n = rooms().length;
-        var box = document.createElement("div");
-        box.id = "ptl-hook";
-        box.style.cssText =
-          "background:#fff;border:1.5px solid " + (d ? "#c4b5fd" : "#f0d0a0") +
-          ";border-radius:14px;padding:14px;margin-bottom:12px";
-        box.innerHTML =
-          '<div style="font-size:14px;font-weight:800;color:#111">💬 포도톡 방 연결</div>' +
-          '<div style="font-size:12.5px;color:#999;margin-top:5px;line-height:1.6">' +
-            (d ? ('현재 <b>' + esc(d.name) + '</b> 방으로 갑니다' + (n > 1 ? (" 외 " + (n - 1) + "개 연결됨") : "")) 
-               : '아직 연결 안 됨 — <b>연결해야 포도톡으로 갑니다</b>') +
-          '</div>' +
-          '<button onclick="podoyaTalkSetup()" style="width:100%;margin-top:11px;padding:11px;' +
-            'border-radius:11px;border:1px solid #dcdcdc;background:#fafafa;color:#111;font-size:13.5px;' +
-            'font-weight:700;cursor:pointer;font-family:inherit">' +
-            (d ? "방 관리" : "방 연결하기") + '</button>';
-        w.insertBefore(box, w.firstChild);
-      }, 30);
+      hookCard(12);
+    };
+  }
+  /* asDeliver() 가 원본 함수를 직접 붙들고 있을 수도 있으니 한 겹 더 */
+  var _origAsDeliver = window.asDeliver;
+  if (typeof _origAsDeliver === "function") {
+    window.asDeliver = function () {
+      _origAsDeliver.apply(this, arguments);
+      hookCard(12);
     };
   }
 
