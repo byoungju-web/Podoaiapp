@@ -24,7 +24,7 @@
 (function () {
   "use strict";
 
-  var PTL_VER = "4";
+  var PTL_VER = "5";
 
   /* ── 설정 ────────────────────────────────────────────────── */
   var API  = "https://podotalk-api.hasin7jk.workers.dev";  /* 워커 */
@@ -41,7 +41,31 @@
   /* ── 작은 도구들 ──────────────────────────────────────────── */
   function LS(k, d) { try { return localStorage.getItem(k) || (d || ""); } catch (e) { return d || ""; } }
   function LSS(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
-  function say(m) { try { if (typeof toast === "function") { toast(m); return; } } catch (e) {} }
+  /* 포도야 index.html 에는 toast() 정의가 없다. 부르는 곳마다
+     try/catch 로 감싸져 있어서 조용히 지나갈 뿐이다. 그래서
+     여기서 작은 알림창을 직접 그린다. toast() 가 생기면 그걸 쓴다. */
+  function say(m, ms) {
+    try { if (typeof toast === "function") { toast(m); return; } } catch (e) {}
+    try {
+      var el = document.getElementById("ptl-toast");
+      if (!el) {
+        el = document.createElement("div");
+        el.id = "ptl-toast";
+        document.body.appendChild(el);
+      }
+      el.textContent = String(m == null ? "" : m);
+      el.style.cssText =
+        "position:fixed;left:50%;bottom:88px;transform:translateX(-50%);z-index:100000;" +
+        "max-width:88%;box-sizing:border-box;background:rgba(23,23,28,.94);color:#fff;" +
+        "padding:12px 16px;border-radius:13px;font-size:13.5px;font-weight:700;line-height:1.5;" +
+        "text-align:center;font-family:inherit;box-shadow:0 6px 22px rgba(0,0,0,.28);" +
+        "pointer-events:none;opacity:1;transition:opacity .3s";
+      clearTimeout(window._ptlToastT);
+      window._ptlToastT = setTimeout(function () {
+        try { el.style.opacity = "0"; } catch (e) {}
+      }, ms || 2200);
+    } catch (e) {}
+  }
   function esc(s) {
     return String(s == null ? "" : s)
       .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
@@ -489,8 +513,8 @@
               : [d.name, d.desc, d.price ? (d.price + "원") : ""].filter(Boolean).join("\n");
       if (navigator.clipboard) navigator.clipboard.writeText(txt);
     } catch (e) {}
-    say("📋 상품 정보를 복사했어요 · 포도다에서 붙여넣으세요");
-    setTimeout(function () { goPododa("#/sell"); }, 700);
+    say("📋 상품 정보를 복사했어요 · 포도다에서 붙여넣으세요", 1600);
+    setTimeout(function () { goPododa("#/sell"); }, 1500);
   };
 
   /* ══════════════════════════════════════════════════════════
