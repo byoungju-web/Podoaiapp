@@ -24,7 +24,7 @@
 (function () {
   "use strict";
 
-  var PTL_VER = "7";
+  var PTL_VER = "8";
 
   /* ── 설정 ────────────────────────────────────────────────── */
   var API  = "https://podotalk-api.hasin7jk.workers.dev";  /* 워커 */
@@ -562,6 +562,59 @@
   var K_PAIR   = "podoya_pt_pair";    /* 짝맞추기 번호 */
   var TRIGGER  = /^\s*[\/@]?\s*포도야[\s,·:]+/;
 
+  /* ── 한국말 시각 읽기 ─────────────────────────────────────
+     "내일 아침 7시에 …" / "30분 뒤 …" / "오후 3시 …" 를 알아듣는다.
+     날짜를 안 적었는데 이미 지난 시각이면 내일로 본다. */
+  function parseWhen(text) {
+    var now = new Date(), s = String(text || ""), m, cut = "";
+
+    m = s.match(/(\d{1,3})\s*(분|시간)\s*(뒤|후|있다가|지나서)/);
+    if (m) {
+      var n = parseInt(m[1], 10);
+      return { at: now.getTime() + n * (m[2] === "시간" ? 3600000 : 60000), cut: m[0] };
+    }
+
+    var dm = s.match(/(오늘|내일|모레|낼)/), day = dm ? dm[1] : "";
+    var hh = null, mm = 0, mark = "";
+    m = s.match(/(새벽|아침|오전|점심|낮|오후|저녁|밤)?\s*(\d{1,2})\s*시\s*(?:(\d{1,2})\s*분)?/);
+    if (m) {
+      mark = m[1] || ""; hh = parseInt(m[2], 10); mm = m[3] ? parseInt(m[3], 10) : 0;
+      cut = (dm ? dm[0] + " " : "") + m[0];
+    } else {
+      m = s.match(/(\d{1,2}):(\d{2})/);
+      if (m) { hh = parseInt(m[1], 10); mm = parseInt(m[2], 10); cut = (dm ? dm[0] + " " : "") + m[0]; }
+    }
+    if (hh === null || hh > 24 || mm > 59) return null;
+
+    var plus = 0;
+    if (mark === "오후" || mark === "저녁" || mark === "밤" || mark === "낮" || mark === "점심") {
+      if (hh < 12) hh += 12;
+      if (mark === "밤" && hh === 24) { hh = 0; plus = 1; }
+    } else if (mark === "새벽" || mark === "아침" || mark === "오전") {
+      if (hh === 12) hh = 0;
+    }
+    if (hh === 24) { hh = 0; plus = 1; }
+
+    var d = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hh, mm, 0, 0);
+    if (day === "내일" || day === "낼") d.setDate(d.getDate() + 1);
+    else if (day === "모레") d.setDate(d.getDate() + 2);
+    d.setDate(d.getDate() + plus);
+    if (!day && d.getTime() <= now.getTime()) d.setDate(d.getDate() + 1);
+    return { at: d.getTime(), cut: cut };
+  }
+
+  function whenLabel(at) {
+    var d = new Date(at), n = new Date();
+    var tm = new Date(n.getTime() + 86400000);
+    var pre = (d.toDateString() === n.toDateString()) ? "오늘"
+            : (d.toDateString() === tm.toDateString()) ? "내일"
+            : ((d.getMonth() + 1) + "월 " + d.getDate() + "일");
+    var h = d.getHours(), ap = h < 12 ? "오전" : "오후", h12 = (h % 12) || 12;
+    var mi = String(d.getMinutes());
+    if (mi.length < 2) mi = "0" + mi;
+    return pre + " " + ap + " " + h12 + ":" + mi;
+  }
+
   function owner() {
     try { var o = JSON.parse(LS(K_OWNER, "null")); return (o && o.uid) ? o : null; }
     catch (e) { return null; }
@@ -571,14 +624,15 @@
   /* 요청을 포도야 실행기 큐에 넣는다.
      roomId 를 'podo_bot' 으로 둬야 botNext() 의 이중 방어를 통과한다.
      실제 포도톡 방은 ptRoom 에 따로 적어 회신 때 쓴다. */
-  function enqueue(text, ptRoom, nick) {
+  function enqueue(text, ptRoom, nick, runAt) {
     try {
       if (typeof window.botInbox !== "function") return false;
       var a = window.botInbox();
       a.push({
         id: "pt_" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
         roomId: "podo_bot", ptRoom: ptRoom, from: nick || "",
-        text: String(text || ""), ts: Date.now(), status: "queued"
+        text: String(text || ""), ts: Date.now(),
+        runAt: runAt || 0, status: runAt ? "scheduled" : "queued"
       });
       if (a.length > 20) a = a.slice(-20);
       window.botSaveInbox(a);
@@ -651,10 +705,43 @@
     if (!TRIGGER.test(body)) return;
     var task = body.replace(TRIGGER, "").trim();
     if (!task) return;
+
+    /* 시각이 적혀 있으면 그때 스스로 돈다. 없으면 확인 후 실행. */
+    var w = parseWhen(task);
+    if (w) {
+      task = task.replace(w.cut, " ").replace(/\s*(에|쯤|경)\s+/, " ").replace(/\s+/g, " ").trim();
+      if (!task) return;
+      if (enqueue(task, roomId, m.nick, w.at)) {
+        paintBot();
+        say("⏰ " + whenLabel(w.at) + " 에 하기로 했어요");
+        sendParts(roomId, ["⏰ " + whenLabel(w.at) + " 에 " + '"' + task + '"' +
+          " 하고 결과를 여기로 보내드릴게요.\n(그 시각에 포도야가 켜져 있어야 해요. 꺼져 있었으면 다음에 열 때 곧바로 합니다)"]);
+      }
+      return;
+    }
+
     if (enqueue(task, roomId, m.nick)) {
+      paintBot();
       say("🍇 요청을 받아뒀어요 · 확인 후 실행해 주세요");
       sendParts(roomId, ["📥 받아뒀어요. 포도야에서 확인하시면 실행하고 결과를 여기로 보내드려요."]);
     }
+  }
+
+  /* 때가 된 예약을 돌린다. 예약 브리핑과 같은 "따라잡기" 방식이라,
+     그 시각에 폰이 꺼져 있었어도 다음에 열면 곧바로 실행한다.
+     한 번에 하나만 돌린다(에이전트가 겹치면 서로 엉킨다). */
+  function dueTick() {
+    try {
+      if (window._botJob) return;                    /* 이미 뭔가 돌고 있다 */
+      if (typeof window.botRunJob !== "function") return;
+      var a = window.botInbox(), now = Date.now(), j = null;
+      for (var i = 0; i < a.length; i++) {
+        if (a[i].status === "scheduled" && a[i].runAt && a[i].runAt <= now) { j = a[i]; break; }
+      }
+      if (!j) return;
+      say("⏰ 예약한 일을 시작합니다 · " + String(j.text).slice(0, 24));
+      window.botRunJob(j);
+    } catch (e) {}
   }
 
   function startPolling() {
@@ -666,10 +753,14 @@
       if (!owner() && !LS(K_PAIR, "")) return;   /* 짝맞추기 전엔 읽지 않는다 */
       pollOnce();
     }, 20000);
+    setInterval(dueTick, 30000);                 /* 예약 시계는 방과 상관없이 돈다 */
     document.addEventListener("visibilitychange", function () {
-      if (!document.hidden && defRoom() && (owner() || LS(K_PAIR, ""))) pollOnce();
+      if (document.hidden) return;
+      if (defRoom() && (owner() || LS(K_PAIR, ""))) pollOnce();
+      dueTick();
     });
     if (defRoom() && (owner() || LS(K_PAIR, ""))) setTimeout(pollOnce, 1500);
+    setTimeout(dueTick, 4000);                   /* 열자마자 밀린 예약을 따라잡는다 */
   }
 
   /* ── 비서 칸 UI ──────────────────────────────────────────── */
@@ -720,6 +811,7 @@
       h += '<div style="background:#fafafa;border:1px dashed #ddd;border-radius:12px;padding:14px;font-size:12.5px;' +
              'color:#888;line-height:1.7">포도톡 방에서 <b>"포도야 ○○해줘"</b> 라고 쓰면 포도야가 받아둡니다. ' +
              '확인하고 실행을 누르시면 결과가 그 방으로 돌아옵니다.<br>' +
+             '<b>"포도야 내일 아침 7시에 ○○해줘"</b> 처럼 시각을 적으면 그때 스스로 합니다.<br>' +
              '<span style="color:#b45309">쓰기 전에 사장님이 누구인지 한 번 알려주셔야 합니다.</span></div>' +
            '<button onclick="podoyaBotPair()" style="width:100%;margin-top:9px;padding:12px;border-radius:11px;' +
              'border:none;background:linear-gradient(135deg,#8b35e0,#a855f7);color:#fff;font-size:13.5px;' +
@@ -736,9 +828,28 @@
              'cursor:pointer;font-family:inherit">해제</button>' +
          '</div>';
 
-    var q = [];
-    try { q = (window.botInbox ? window.botInbox() : []).filter(function (x) { return x.status === "queued"; }); }
-    catch (e) {}
+    var all = [];
+    try { all = window.botInbox ? window.botInbox() : []; } catch (e) {}
+    var sc = all.filter(function (x) { return x.status === "scheduled"; })
+                .sort(function (a2, b2) { return (a2.runAt || 0) - (b2.runAt || 0); });
+    if (sc.length) {
+      h += '<div style="font-size:12px;font-weight:800;color:#555;margin:12px 0 7px">⏰ 예약해둔 일 ' + sc.length + '건</div>';
+      for (var s = 0; s < sc.length; s++) {
+        h += '<div style="background:#fff;border:1.5px solid #cfe3f8;border-radius:12px;padding:12px;margin-bottom:8px">' +
+               '<div style="font-size:11.5px;font-weight:800;color:#1d6fb8">' + esc(whenLabel(sc[s].runAt)) + '</div>' +
+               '<div style="font-size:13px;color:#111;line-height:1.6;margin-top:3px;word-break:break-all">' + esc(sc[s].text) + '</div>' +
+               '<div style="display:flex;gap:7px;margin-top:10px">' +
+                 '<button onclick="podoyaBotRun(\'' + esc(sc[s].id) + '\')" style="flex:2;padding:10px;border-radius:10px;' +
+                   'border:1px solid #dcdcdc;background:#fff;color:#111;font-size:12.5px;font-weight:700;' +
+                   'cursor:pointer;font-family:inherit">지금 실행</button>' +
+                 '<button onclick="podoyaBotDrop(\'' + esc(sc[s].id) + '\')" style="flex:1;padding:10px;border-radius:10px;' +
+                   'border:1px solid #f0d0d0;background:#fff;color:#c0392b;font-size:12.5px;font-weight:700;' +
+                   'cursor:pointer;font-family:inherit">취소</button>' +
+               '</div></div>';
+      }
+    }
+
+    var q = all.filter(function (x) { return x.status === "queued"; });
     if (q.length) {
       h += '<div style="font-size:12px;font-weight:800;color:#555;margin:12px 0 7px">📥 기다리는 요청 ' + q.length + '건</div>';
       for (var i = 0; i < q.length; i++) {
