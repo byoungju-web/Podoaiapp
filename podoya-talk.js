@@ -1,5 +1,5 @@
 /* ══════════════════════════════════════════════════════════════
-   🍇 PODOYA-TALK 레이어 — 포도야(podoya.ai.kr) → 포도톡(podotalk.kr)
+   🍇 PODOYA 링크 레이어 — podoya.ai.kr 에서 바깥 서비스로 잇는 다리
    ──────────────────────────────────────────────────────────────
    원칙 : index.html 안의 기존 코드는 한 줄도 고치지 않는다.
           여기서 전역 함수를 덮어쓰기(override)만 한다.
@@ -9,23 +9,27 @@
      ② podotalkPushMsg() 를 podotalk-api 워커 호출로 바꾼다
         (예약 브리핑 · 문서 보관 · 커넥션 결과가 진짜 포도톡으로 감)
      ③ "포도톡 방 연결" 화면을 발송 채널 설정 안에 끼워 넣는다
+     ④ 포도다 이동 주소를 pododa.html → pododa.kr 로 바꾼다
+        (격자 아이콘 · AI매칭 상품등록 · 상점등록 · 포도다에 등록)
+     ⑤ 죽은 비서 버튼(asTalk · botBack)을 감춘다
 
    안 하는 일 :
-     · 포도다(pododa.kr) 관련 — 나중에
      · 포도야 비서 inbox/outbox 양방향 — 나중에
      · 포도톡(pt2.js / podotalk-worker.js) 수정 — 필요 없음
+     · pododa.html 삭제 — pododa.kr 의 키 브리지가 아직 물고 있다
 
    붙이는 법 : index.html 의 </body> 바로 위에
-               <script src="/podoya-talk.js"></script>
+               <script src="podoya-talk.js"></script>
    ══════════════════════════════════════════════════════════════ */
 (function () {
   "use strict";
 
-  var PTL_VER = "3";
+  var PTL_VER = "4";
 
   /* ── 설정 ────────────────────────────────────────────────── */
   var API  = "https://podotalk-api.hasin7jk.workers.dev";  /* 워커 */
   var SITE = "https://podotalk.kr";                        /* 화면 */
+  var PODODA = "https://pododa.kr";                        /* 포도다 */
   var PFX  = "sv_";        /* pt2.js 가 서버 방을 이 접두어로 읽는다 */
 
   var K_UID   = "podoya_pt_uid";     /* 포도야가 쓰는 발신자 id */
@@ -443,6 +447,76 @@
       hookCard(12);
     };
   }
+
+  /* ══════════════════════════════════════════════════════════
+     ④ 포도다 — pododa.html → pododa.kr 로 완전히 분리
+     같은 폴더의 파일이 아니라 별도 서비스로 대한다. 데이터를
+     넘겨주는 다리는 만들지 않는다. 넘길 값은 클립보드로 준다.
+     ══════════════════════════════════════════════════════════ */
+  function goPododa(hash) {
+    try { window._vansActive = false; } catch (e) {}
+    var u = PODODA + "/" + (hash || "");
+    try { location.assign(u); } catch (e) { location.href = u; }
+  }
+
+  /* 격자의 "포도다" 아이콘 */
+  window.openPododa = function () { goPododa(""); };
+
+  /* 홈의 "AI매칭 상품등록"(shop) · "상점등록"(food) */
+  window.openPododaReg = function (kind) {
+    goPododa(kind === "food" ? "#/stores" : "");
+  };
+
+  /* 격자는 함수를 배열에 담아두고 누를 때마다 꺼내 쓴다.
+     그래서 배열 안의 값을 바꿔주면 아이콘도 새 주소로 간다. */
+  try {
+    var F = window.PODO_FEATURES;
+    if (F && F.length) {
+      for (var fi = 0; fi < F.length; fi++) {
+        if (F[fi] && F[fi].id === "pododa") F[fi].act = window.openPododa;
+      }
+    }
+  } catch (e) {}
+
+  /* 상품 만들기 화면의 "🍇 포도다에 등록"
+     원래는 localStorage 로 상품 정보를 넘겼는데 도메인이 갈려 막혔다.
+     원본도 이미 클립보드에 복사하고 있었으므로 붙여넣기로 대신한다. */
+  window.lcToPododa = function () {
+    var d = window._lcData;
+    if (!d) return;
+    try {
+      var txt = (typeof window._lcText === "function") ? window._lcText(d)
+              : [d.name, d.desc, d.price ? (d.price + "원") : ""].filter(Boolean).join("\n");
+      if (navigator.clipboard) navigator.clipboard.writeText(txt);
+    } catch (e) {}
+    say("📋 상품 정보를 복사했어요 · 포도다에서 붙여넣으세요");
+    setTimeout(function () { goPododa("#/sell"); }, 700);
+  };
+
+  /* ══════════════════════════════════════════════════════════
+     ⑤ 죽은 비서 버튼 감추기
+     asTalk() · botBack() 은 pododa.html 안의 비서 방으로 가던 것이다.
+     포도다와 포도톡이 갈라지면서 갈 곳이 없어졌다. 함수를 비우기만
+     하면 눌러도 아무 일이 없는 단추가 남으므로, 단추째 감춘다.
+     ══════════════════════════════════════════════════════════ */
+  window.asTalk = function () {};
+  window.botBack = function () {};
+
+  function hideDead() {
+    try {
+      var q = document.querySelectorAll('[onclick*="asTalk"],[onclick*="botBack"]');
+      for (var i = 0; i < q.length; i++) {
+        if (q[i].style.display !== "none") q[i].style.display = "none";
+      }
+    } catch (e) {}
+  }
+
+  try {
+    hideDead();
+    if (window.MutationObserver) {
+      new MutationObserver(hideDead).observe(document.body, { childList: true, subtree: true });
+    }
+  } catch (e) {}
 
   /* ── 준비 확인 ────────────────────────────────────────────── */
   try {
