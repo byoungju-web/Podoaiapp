@@ -24,7 +24,7 @@
 (function () {
   "use strict";
 
-  var PTL_VER = "5";
+  var PTL_VER = "6";
 
   /* ── 설정 ────────────────────────────────────────────────── */
   var API  = "https://podotalk-api.hasin7jk.workers.dev";  /* 워커 */
@@ -504,7 +504,8 @@
 
   /* 상품 만들기 화면의 "🍇 포도다에 등록"
      원래는 localStorage 로 상품 정보를 넘겼는데 도메인이 갈려 막혔다.
-     원본도 이미 클립보드에 복사하고 있었으므로 붙여넣기로 대신한다. */
+     원본도 이미 클립보드에 복사하고 있었으므로 붙여넣기로 대신한다.
+     안내창 없이 바로 넘어간다(사장님 요청). 복사는 그대로 한다. */
   window.lcToPododa = function () {
     var d = window._lcData;
     if (!d) return;
@@ -513,8 +514,7 @@
               : [d.name, d.desc, d.price ? (d.price + "원") : ""].filter(Boolean).join("\n");
       if (navigator.clipboard) navigator.clipboard.writeText(txt);
     } catch (e) {}
-    say("📋 상품 정보를 복사했어요 · 포도다에서 붙여넣으세요", 1600);
-    setTimeout(function () { goPododa("#/sell"); }, 1500);
+    setTimeout(function () { goPododa("#/sell"); }, 700);
   };
 
   /* ══════════════════════════════════════════════════════════
