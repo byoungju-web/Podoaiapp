@@ -24,7 +24,7 @@
 (function () {
   "use strict";
 
-  var PTL_VER = "6";
+  var PTL_VER = "7";
 
   /* ── 설정 ────────────────────────────────────────────────── */
   var API  = "https://podotalk-api.hasin7jk.workers.dev";  /* 워커 */
@@ -394,6 +394,8 @@
 
       '<div id="ptl-msg" style="display:none"></div>' +
 
+      '<div id="ptl-bot"></div>' +
+
       '<details style="margin-top:13px">' +
         '<summary style="font-size:12px;color:#888;cursor:pointer">방 코드는 어디서 받나요?</summary>' +
         '<ol style="margin:8px 0 2px;padding-left:19px;font-size:12px;color:#666;line-height:1.9">' +
@@ -409,6 +411,7 @@
 
     bg.appendChild(sheet);
     document.body.appendChild(bg);
+    paintBot();
   };
 
   /* ── 발송 채널 설정 안에 "방 연결" 카드 끼워 넣기 ──────────── */
@@ -541,6 +544,225 @@
       new MutationObserver(hideDead).observe(document.body, { childList: true, subtree: true });
     }
   } catch (e) {}
+
+  /* ══════════════════════════════════════════════════════════
+     ⑥ 포도야 비서 양방향 — 포도톡 방 ↔ 포도야 실행기
+     ──────────────────────────────────────────────────────────
+     포도톡은 손대지 않는다. 포도야가 방을 읽기만 한다.
+     원래 설계(확인 후 실행)를 그대로 지킨다:
+       포도톡에서 "포도야 …" 라고 쓴다
+         → 포도야를 열면 요청함에 쌓인다 (자동 실행 안 함)
+         → 사장님이 실행을 누른다
+         → 결과가 그 방으로 돌아간다
+     🔒 사장님 uid 의 메시지만 받는다. 방에 다른 분이 있어도
+        그분 말은 실행기에 닿지 않는다.
+     ══════════════════════════════════════════════════════════ */
+  var K_OWNER  = "podoya_pt_owner";   /* 사장님 uid */
+  var K_CURSOR = "podoya_pt_cursor";  /* 어디까지 읽었나 */
+  var K_PAIR   = "podoya_pt_pair";    /* 짝맞추기 번호 */
+  var TRIGGER  = /^\s*[\/@]?\s*포도야[\s,·:]+/;
+
+  function owner() {
+    try { var o = JSON.parse(LS(K_OWNER, "null")); return (o && o.uid) ? o : null; }
+    catch (e) { return null; }
+  }
+  function saveOwner(o) { LSS(K_OWNER, o ? JSON.stringify(o) : ""); }
+
+  /* 요청을 포도야 실행기 큐에 넣는다.
+     roomId 를 'podo_bot' 으로 둬야 botNext() 의 이중 방어를 통과한다.
+     실제 포도톡 방은 ptRoom 에 따로 적어 회신 때 쓴다. */
+  function enqueue(text, ptRoom, nick) {
+    try {
+      if (typeof window.botInbox !== "function") return false;
+      var a = window.botInbox();
+      a.push({
+        id: "pt_" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+        roomId: "podo_bot", ptRoom: ptRoom, from: nick || "",
+        text: String(text || ""), ts: Date.now(), status: "queued"
+      });
+      if (a.length > 20) a = a.slice(-20);
+      window.botSaveInbox(a);
+      return true;
+    } catch (e) { return false; }
+  }
+
+  /* 결과 회신 — 원래는 localStorage outbox 에 썼다. 이제 방으로 보낸다. */
+  var _origBotReply = window.botReply;
+  window.botReply = function (job, text) {
+    var rid = (job && job.ptRoom) || (defRoom() && defRoom().id);
+    if (!rid) { try { _origBotReply && _origBotReply(job, text); } catch (e) {} return; }
+    sendParts(rid, chunks(tame(String(text || "")))).then(function (r) {
+      if (r && r.stop) say("결과를 보내지 못했어요: " + (r.error || ""));
+    });
+  };
+
+  /* 자동 실행은 하지 않는다. 알려만 준다. */
+  window.botCheck = function () {
+    try {
+      var n = 0, a = window.botInbox ? window.botInbox() : [];
+      for (var i = 0; i < a.length; i++) if (a[i].status === "queued") n++;
+      if (n) say("🍇 포도톡에서 온 요청 " + n + "건이 기다리고 있어요");
+    } catch (e) {}
+  };
+
+  /* ── 방 읽기 ─────────────────────────────────────────────── */
+  var polling = false;
+
+  function pollOnce() {
+    var d = defRoom();
+    if (!d) return;
+    var cur = parseInt(LS(K_CURSOR, "0"), 10) || 0;
+    var path = "/talk/messages?room_id=" + encodeURIComponent(d.id) + (cur ? ("&after=" + cur) : "");
+    api(path).then(function (r) {
+      if (!r || !r.ok || !r.messages) return;
+      var list = r.messages, newest = cur;
+      for (var i = 0; i < list.length; i++) {
+        var m = list[i] || {};
+        var ts = parseInt(m.created || 0, 10) || 0;
+        if (ts > newest) newest = ts;
+        /* 처음 연결한 순간부터 읽는다. 예전 글까지 거슬러 실행하지 않는다. */
+        if (!cur) continue;
+        handle(m, d.id);
+      }
+      if (!newest) newest = r.now || Date.now();
+      LSS(K_CURSOR, String(newest));
+    });
+  }
+
+  function handle(m, roomId) {
+    var body = String(m.body || "");
+    var uid = String(m.uid || "");
+    if (!uid || uid === myUid()) return;              /* 포도야 자기 글은 무시 */
+
+    /* 1) 짝맞추기 — 화면에만 보여준 번호를 방에 적으면 그 사람이 사장님 */
+    var pair = LS(K_PAIR, "");
+    if (pair && body.indexOf(pair) >= 0) {
+      saveOwner({ uid: uid, nick: String(m.nick || "사장님").slice(0, 20) });
+      LSS(K_PAIR, "");
+      paintBot();
+      say("✅ 사장님 확인됨 · 이제 \"포도야 …\" 라고 쓰시면 됩니다");
+      sendParts(roomId, ["✅ 확인됐어요. 이제 " + '"포도야 ○○해줘"' + " 라고 쓰시면 포도야가 받아둡니다."]);
+      return;
+    }
+
+    /* 2) 요청 접수 — 🔒 사장님 uid 만 */
+    var o = owner();
+    if (!o || o.uid !== uid) return;
+    if (!TRIGGER.test(body)) return;
+    var task = body.replace(TRIGGER, "").trim();
+    if (!task) return;
+    if (enqueue(task, roomId, m.nick)) {
+      say("🍇 요청을 받아뒀어요 · 확인 후 실행해 주세요");
+      sendParts(roomId, ["📥 받아뒀어요. 포도야에서 확인하시면 실행하고 결과를 여기로 보내드려요."]);
+    }
+  }
+
+  function startPolling() {
+    if (polling) return;
+    polling = true;
+    setInterval(function () {
+      if (document.hidden) return;
+      if (!defRoom()) return;
+      if (!owner() && !LS(K_PAIR, "")) return;   /* 짝맞추기 전엔 읽지 않는다 */
+      pollOnce();
+    }, 20000);
+    document.addEventListener("visibilitychange", function () {
+      if (!document.hidden && defRoom() && (owner() || LS(K_PAIR, ""))) pollOnce();
+    });
+    if (defRoom() && (owner() || LS(K_PAIR, ""))) setTimeout(pollOnce, 1500);
+  }
+
+  /* ── 비서 칸 UI ──────────────────────────────────────────── */
+  window.podoyaBotPair = function () {
+    if (!defRoom()) { note("먼저 방을 연결해 주세요", 1); return; }
+    var c = String(Math.floor(100000 + Math.random() * 900000));
+    LSS(K_PAIR, c);
+    paintBot();
+    pollOnce();
+  };
+  window.podoyaBotUnpair = function () {
+    if (!confirm("사장님 확인을 해제할까요?\n포도톡에서 온 요청을 더 이상 받지 않습니다.")) return;
+    saveOwner(null); LSS(K_PAIR, ""); paintBot(); say("해제했어요");
+  };
+  window.podoyaBotRun = function (id) {
+    try {
+      var a = window.botInbox(), j = null;
+      for (var i = 0; i < a.length; i++) if (a[i].id === id) j = a[i];
+      if (!j) { note("요청을 찾지 못했어요", 1); return; }
+      closeSetup();
+      window.botRunJob(j);
+    } catch (e) { note("실행하지 못했어요", 1); }
+  };
+  window.podoyaBotDrop = function (id) {
+    try {
+      var a = window.botInbox().filter(function (x) { return x.id !== id; });
+      window.botSaveInbox(a); paintBot(); say("지웠어요");
+    } catch (e) {}
+  };
+
+  function botHtml() {
+    var o = owner(), pair = LS(K_PAIR, "");
+    var h = '<div style="font-size:13.5px;font-weight:800;color:#111;margin:18px 0 8px">🤖 포도톡에서 시키기 <span style="font-size:11px;font-weight:700;color:#aaa">· 선택</span></div>';
+
+    if (pair) {
+      h += '<div style="background:#fffbeb;border:1.5px solid #fde68a;border-radius:12px;padding:13px">' +
+             '<div style="font-size:12.5px;color:#92400e;line-height:1.7">포도톡 방에 아래 글을 보내주세요. ' +
+             '그 글을 쓴 분을 사장님으로 기억합니다.</div>' +
+             '<div style="margin-top:9px;background:#fff;border:1px dashed #d6bd8a;border-radius:10px;padding:12px;' +
+             'text-align:center;font-size:17px;font-weight:900;color:#111;letter-spacing:1px">포도야 등록 ' + esc(pair) + '</div>' +
+             '<div style="font-size:11px;color:#a98;margin-top:8px;line-height:1.6">이 번호는 방에 보내지 않았습니다. ' +
+             '이 화면을 보는 사람만 알 수 있어서, 다른 분이 사장님 행세를 할 수 없습니다.</div>' +
+           '</div>';
+      return h;
+    }
+
+    if (!o) {
+      h += '<div style="background:#fafafa;border:1px dashed #ddd;border-radius:12px;padding:14px;font-size:12.5px;' +
+             'color:#888;line-height:1.7">포도톡 방에서 <b>"포도야 ○○해줘"</b> 라고 쓰면 포도야가 받아둡니다. ' +
+             '확인하고 실행을 누르시면 결과가 그 방으로 돌아옵니다.<br>' +
+             '<span style="color:#b45309">쓰기 전에 사장님이 누구인지 한 번 알려주셔야 합니다.</span></div>' +
+           '<button onclick="podoyaBotPair()" style="width:100%;margin-top:9px;padding:12px;border-radius:11px;' +
+             'border:none;background:linear-gradient(135deg,#8b35e0,#a855f7);color:#fff;font-size:13.5px;' +
+             'font-weight:800;cursor:pointer;font-family:inherit">사장님 확인하기</button>';
+      return h;
+    }
+
+    h += '<div style="display:flex;align-items:center;gap:9px;background:#f0fdf4;border:1.5px solid #c8ead4;' +
+           'border-radius:12px;padding:11px 12px">' +
+           '<div style="flex:1;min-width:0;font-size:12.5px;color:#15803d;line-height:1.6">✅ 사장님 <b>' + esc(o.nick) + '</b> 확인됨<br>' +
+           '<span style="font-size:11px;color:#6a9">이분이 쓴 "포도야 …" 만 받습니다</span></div>' +
+           '<button onclick="podoyaBotUnpair()" style="flex-shrink:0;padding:7px 10px;border-radius:9px;' +
+             'border:1px solid #f0d0d0;background:#fff;color:#c0392b;font-size:11.5px;font-weight:700;' +
+             'cursor:pointer;font-family:inherit">해제</button>' +
+         '</div>';
+
+    var q = [];
+    try { q = (window.botInbox ? window.botInbox() : []).filter(function (x) { return x.status === "queued"; }); }
+    catch (e) {}
+    if (q.length) {
+      h += '<div style="font-size:12px;font-weight:800;color:#555;margin:12px 0 7px">📥 기다리는 요청 ' + q.length + '건</div>';
+      for (var i = 0; i < q.length; i++) {
+        h += '<div style="background:#fff;border:1.5px solid #e6e0f6;border-radius:12px;padding:12px;margin-bottom:8px">' +
+               '<div style="font-size:13px;color:#111;line-height:1.6;word-break:break-all">' + esc(q[i].text) + '</div>' +
+               '<div style="display:flex;gap:7px;margin-top:10px">' +
+                 '<button onclick="podoyaBotRun(\'' + esc(q[i].id) + '\')" style="flex:2;padding:10px;border-radius:10px;' +
+                   'border:none;background:linear-gradient(135deg,#8b35e0,#a855f7);color:#fff;font-size:12.5px;' +
+                   'font-weight:800;cursor:pointer;font-family:inherit">실행</button>' +
+                 '<button onclick="podoyaBotDrop(\'' + esc(q[i].id) + '\')" style="flex:1;padding:10px;border-radius:10px;' +
+                   'border:1px solid #ddd;background:#fff;color:#666;font-size:12.5px;font-weight:700;' +
+                   'cursor:pointer;font-family:inherit">삭제</button>' +
+               '</div></div>';
+      }
+    }
+    return h;
+  }
+
+  function paintBot() {
+    var el = document.getElementById("ptl-bot");
+    if (el) el.innerHTML = botHtml();
+  }
+
+  try { startPolling(); } catch (e) {}
 
   /* ── 준비 확인 ────────────────────────────────────────────── */
   try {
