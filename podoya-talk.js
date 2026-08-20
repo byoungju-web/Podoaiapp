@@ -12,6 +12,7 @@
      ④ 포도다 이동 주소를 pododa.html → pododa.kr 로 바꾼다
         (격자 아이콘 · AI매칭 상품등록 · 상점등록 · 포도다에 등록)
      ⑤ 죽은 비서 버튼(asTalk · botBack)을 감춘다
+     ⑥ 매일 리포트 폼이 마지막에 쓴 방 이름을 기억하게 한다
 
    안 하는 일 :
      · 포도야 비서 inbox/outbox 양방향 — 나중에
@@ -24,7 +25,7 @@
 (function () {
   "use strict";
 
-  var PTL_VER = "8";
+  var PTL_VER = "9";
 
   /* ── 설정 ────────────────────────────────────────────────── */
   var API  = "https://podotalk-api.hasin7jk.workers.dev";  /* 워커 */
@@ -874,6 +875,58 @@
   }
 
   try { startPolling(); } catch (e) {}
+
+  /* ══════════════════════════════════════════════════════════
+     ⑥ 매일 리포트 — 방 이름을 기억한다
+     원본 openRevReport() 는 새 리포트 폼의 방 칸을 늘 "나" 로
+     그린다. 값이 코드에 박혀 있다. 그래서 "내방" 으로 고쳐
+     저장해도 화면을 다시 열면 "나" 로 보인다. repSave() 가
+     끝나며 openRevReport() 를 다시 부르므로 저장 직후에도 그렇다.
+
+     저장된 리포트 자체는 멀쩡하다. 폼의 기본값만 문제다.
+     여기서 마지막에 쓴 방 이름을 기억했다가 다시 채워 넣는다.
+     기억이 없으면 연결된 기본 방 이름을 쓴다.
+     ══════════════════════════════════════════════════════════ */
+  var K_RPROOM = "podoya_rp_room";
+
+  function rpRoomDefault() {
+    var v = LS(K_RPROOM, "").trim();
+    if (v) return v;
+    var d = defRoom();
+    return (d && d.name) ? String(d.name).trim() : "";
+  }
+
+  /* 화면이 늦게 그려질 수 있으니 몇 번 다시 확인한다 */
+  function fillRpRoom(tries) {
+    var el = document.getElementById("rp-room");
+    if (!el) {
+      if (tries > 0) setTimeout(function () { fillRpRoom(tries - 1); }, 120);
+      return;
+    }
+    var v = rpRoomDefault();
+    if (v) el.value = v;
+  }
+
+  var _origOpenRep = window.openRevReport;
+  if (typeof _origOpenRep === "function") {
+    window.openRevReport = function () {
+      _origOpenRep.apply(this, arguments);
+      fillRpRoom(12);
+    };
+  }
+
+  /* 저장할 때 적어둔 방 이름을 기억해 둔다 */
+  var _origRepSave = window.repSave;
+  if (typeof _origRepSave === "function") {
+    window.repSave = function () {
+      try {
+        var el = document.getElementById("rp-room");
+        var v = el ? String(el.value || "").trim() : "";
+        if (v) LSS(K_RPROOM, v);
+      } catch (e) {}
+      return _origRepSave.apply(this, arguments);
+    };
+  }
 
   /* ── 준비 확인 ────────────────────────────────────────────── */
   try {
