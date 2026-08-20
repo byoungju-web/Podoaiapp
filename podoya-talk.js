@@ -26,7 +26,7 @@
 (function () {
   "use strict";
 
-  var PTL_VER = "11";
+  var PTL_VER = "12";
 
   /* ── 설정 ────────────────────────────────────────────────── */
   var API  = "https://podotalk-api.hasin7jk.workers.dev";  /* 워커 */
@@ -983,6 +983,27 @@
       stripSrvBox();
     };
   }
+
+  /* pushRender() 를 감싸는 것만으로는 안 잡히는 경우가 있어서
+     두 겹을 더 둔다. 어느 하나만 통해도 칸은 사라진다.
+
+     ㉠ CSS 로 미리 숨긴다 — 화면에 그려지는 순간 이미 안 보인다.
+        :has() 를 모르는 낡은 브라우저에서는 이 줄이 그냥 무시된다.
+     ㉡ 화면이 바뀔 때마다 확인해서 지운다 — 늦게 그려져도 잡힌다. */
+  try {
+    var st = document.createElement("style");
+    st.textContent = "#pn-box > div:has(#pn-srv){display:none!important}";
+    (document.head || document.documentElement).appendChild(st);
+  } catch (e) {}
+
+  try {
+    if (window.MutationObserver) {
+      new MutationObserver(function () { stripSrvBox(); })
+        .observe(document.documentElement, { childList: true, subtree: true });
+    } else {
+      setInterval(stripSrvBox, 700);
+    }
+  } catch (e) { try { setInterval(stripSrvBox, 700); } catch (e2) {} }
 
   /* ── 준비 확인 ────────────────────────────────────────────── */
   try {
