@@ -13,6 +13,7 @@
         (격자 아이콘 · AI매칭 상품등록 · 상점등록 · 포도다에 등록)
      ⑤ 죽은 비서 버튼(asTalk · botBack)을 감춘다
      ⑥ 매일 리포트 폼이 마지막에 쓴 방 이름을 기억하게 한다
+     ⑦ 알람시계 서버 주소를 박아넣고 입력칸을 감춘다
 
    안 하는 일 :
      · 포도야 비서 inbox/outbox 양방향 — 나중에
@@ -25,7 +26,7 @@
 (function () {
   "use strict";
 
-  var PTL_VER = "9";
+  var PTL_VER = "11";
 
   /* ── 설정 ────────────────────────────────────────────────── */
   var API  = "https://podotalk-api.hasin7jk.workers.dev";  /* 워커 */
@@ -915,6 +916,18 @@
     };
   }
 
+  /* 격자 아이콘은 함수를 배열에 미리 담아두고 누를 때 꺼내 쓴다.
+     그래서 window 를 덮어써도 그 자리는 옛 함수를 계속 붙들고 있다.
+     ④에서 포도다 아이콘에 했던 것과 같은 처리를 여기도 해준다. */
+  try {
+    var FR = window.PODO_FEATURES;
+    if (FR && FR.length) {
+      for (var ri = 0; ri < FR.length; ri++) {
+        if (FR[ri] && FR[ri].id === "report") FR[ri].act = window.openRevReport;
+      }
+    }
+  } catch (e) {}
+
   /* 저장할 때 적어둔 방 이름을 기억해 둔다 */
   var _origRepSave = window.repSave;
   if (typeof _origRepSave === "function") {
@@ -925,6 +938,49 @@
         if (v) LSS(K_RPROOM, v);
       } catch (e) {}
       return _origRepSave.apply(this, arguments);
+    };
+  }
+
+  /* ══════════════════════════════════════════════════════════
+     ⑦ 알람시계 서버 — 주소를 박아넣고 입력칸을 감춘다
+     원본 pushRender() 는 서버 주소 입력칸을 그대로 보여준다.
+     그 값은 폰마다 따로 저장되므로 남에게 새지는 않지만, 손님
+     폰에서는 늘 비어 있어 아침 알림이 아예 안 온다. 그리고 빈
+     칸이 보이면 손님이 아무 주소나 넣을 수 있다.
+
+     그래서 주소는 여기서 정하고, 칸은 지운다. 손님은 "알림 켜기"
+     만 누르면 된다.
+
+     🔒 주소가 코드에 박히면 공개 주소가 된다. 무료·유료 한도와
+        요청 검사는 워커 쪽에서 해야 한다. 여기서는 못 막는다.
+     ══════════════════════════════════════════════════════════ */
+  var ALARM   = "https://podoya-alram2.hasin7jk.workers.dev";
+  var K_PSRV  = "podoai_push_srv";   /* index.html 의 PUSH_SRV 와 같은 키 */
+
+  /* 저장된 값이 없거나 예전 주소면 지금 주소로 맞춘다 */
+  try {
+    if (LS(K_PSRV, "").trim() !== ALARM) LSS(K_PSRV, ALARM);
+  } catch (e) {}
+
+  /* 입력칸이 들어있는 칸막이 통째로 걷어낸다 (테스트 단추도 그 안에 있다) */
+  function stripSrvBox() {
+    try {
+      var inp = document.getElementById("pn-srv");
+      if (!inp) return;
+      var box = inp.parentNode;                       /* 입력칸+저장 단추 줄 */
+      while (box && box.id !== "pn-box" &&
+             String(box.getAttribute("style") || "").indexOf("dashed") < 0) {
+        box = box.parentNode;
+      }
+      if (box && box.id !== "pn-box" && box.parentNode) box.parentNode.removeChild(box);
+    } catch (e) {}
+  }
+
+  var _origPushRender = window.pushRender;
+  if (typeof _origPushRender === "function") {
+    window.pushRender = function () {
+      _origPushRender.apply(this, arguments);
+      stripSrvBox();
     };
   }
 
