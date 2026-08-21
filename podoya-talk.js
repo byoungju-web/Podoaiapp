@@ -14,6 +14,7 @@
      ⑤ 죽은 비서 버튼(asTalk · botBack)을 감춘다
      ⑥ 매일 리포트 폼이 마지막에 쓴 방 이름을 기억하게 한다
      ⑦ 알람시계 서버 주소를 박아넣고 입력칸을 감춘다
+     ⑧ 포도야 비서 첫 줄의 🍇 를 뺀다
 
    안 하는 일 :
      · 포도야 비서 inbox/outbox 양방향 — 나중에
@@ -26,7 +27,7 @@
 (function () {
   "use strict";
 
-  var PTL_VER = "12";
+  var PTL_VER = "13";
 
   /* ── 설정 ────────────────────────────────────────────────── */
   var API  = "https://podotalk-api.hasin7jk.workers.dev";  /* 워커 */
@@ -998,12 +999,38 @@
 
   try {
     if (window.MutationObserver) {
-      new MutationObserver(function () { stripSrvBox(); })
+      new MutationObserver(function () { stripSrvBox(); stripAssistGrape(); })
         .observe(document.documentElement, { childList: true, subtree: true });
     } else {
-      setInterval(stripSrvBox, 700);
+      setInterval(function () { stripSrvBox(); stripAssistGrape(); }, 700);
     }
   } catch (e) { try { setInterval(stripSrvBox, 700); } catch (e2) {} }
+
+  /* ══════════════════════════════════════════════════════════
+     ⑧ 포도야 비서 첫 줄에서 🍇 를 뺀다
+     "🍇 준비됐어요 · 바로 시킬 수 있어요" → "준비됐어요 · 바로 시킬 수 있어요"
+     아래 "🍇 AI만 켜면 바로 시작돼요" 도 같이 처리된다.
+
+     이모지는 폰이 그리는 글자라 기기마다 모양이 다르다. 그림으로
+     바꾸면 줄 높이가 흔들리고 파일 요청이 는다. 그냥 뺀다.
+
+     화면 여는 함수가 배열에 담겨 있어 감싸도 안 잡히므로,
+     ⑦의 화면 감시에 얹어 처리한다. 비서 화면 안에서만 손댄다.
+     ══════════════════════════════════════════════════════════ */
+  function stripAssistGrape() {
+    try {
+      var bg = document.getElementById("assist-bg");
+      if (!bg) return;
+      var ds = bg.getElementsByTagName("div");
+      for (var i = 0; i < ds.length; i++) {
+        var el = ds[i];
+        if (el.children.length) continue;              /* 잎사귀 칸만 */
+        var t = el.textContent || "";
+        if (t.indexOf("🍇") !== 0) continue;
+        el.textContent = t.replace(/^🍇\s*/, "");
+      }
+    } catch (e) {}
+  }
 
   /* ── 준비 확인 ────────────────────────────────────────────── */
   try {
