@@ -7,19 +7,40 @@
    실행은 사용자가 알림을 탭한 뒤 앱 안에서 한다.
    → 서버도 SW도 키를 본 적이 없다.
 
-   ※ 이 파일은 화면을 저장(캐시)하지 않는다. fetch 처리가 없다.
-     예전 버전이 남긴 캐시가 있으면 켜질 때 지운다. */
+   ※ 2026-08-21 — 셸 캐싱을 추가했다.
+     화면(index.html)과 아이콘만 캐시에 둔다. 재방문 때 즉시 뜨고,
+     뒤에서 새 버전을 받아 다음 실행에 반영한다.
+     캐시에 넣는 것은 같은 도메인 GET 뿐이다. 외부 API(워커·AI·카카오)는
+     손대지 않으므로 응답이 낡을 일이 없다.
+     배포할 때마다 아래 SHELL_CACHE 의 v 숫자를 올린다. */
 
 var APP = './index.html';
-var SW_VER = '2026-08-06';   // 이 값을 바꾸면 브라우저가 새 파일로 인식한다
+var SW_VER = '2026-08-21';   // 이 값을 바꾸면 브라우저가 새 파일로 인식한다
 
-self.addEventListener('install', function(e){ self.skipWaiting(); });
+/* ── 셸 캐싱 설정 ───────────────────────────────────────── */
+var SHELL_CACHE = 'podoya-shell-v1';                    // 배포 때마다 v2, v3…
+var ROOT = new URL('./', self.location.href).href;      // 예: https://podoya.ai.kr/
+var SHELL = [ROOT, ROOT + 'manifest.json', ROOT + 'podo-192.png'];
+
+self.addEventListener('install', function(e){
+  e.waitUntil(
+    (self.caches
+      ? caches.open(SHELL_CACHE)
+          .then(function(c){ return c.addAll(SHELL); })
+          .catch(function(){})               // 파일 하나가 없어도 설치는 계속된다
+      : Promise.resolve())
+    .then(function(){ return self.skipWaiting(); })
+  );
+});
 
 self.addEventListener('activate', function(e){
   e.waitUntil(
-    // 1) 예전 버전이 남긴 캐시를 모두 비운다 (localStorage 는 건드리지 않는다)
+    // 1) 예전 버전이 남긴 캐시를 비운다 — 단, 지금 쓰는 셸 캐시는 남긴다
+    //    (여기서 전부 지우면 방금 저장한 화면까지 날아가 캐싱이 무의미해진다)
     (self.caches ? caches.keys().then(function(names){
-      return Promise.all(names.map(function(n){ return caches.delete(n); }));
+      return Promise.all(names.map(function(n){
+        if (n !== SHELL_CACHE) return caches.delete(n);
+      }));
     }) : Promise.resolve())
     // 2) 열려 있는 탭을 곧바로 넘겨받는다
     .then(function(){ return self.clients.claim(); })
@@ -33,6 +54,52 @@ self.addEventListener('activate', function(e){
       }
     })
     .catch(function(){ return self.clients.claim(); })
+  );
+});
+
+/* ── 셸 캐싱 ─────────────────────────────────────────────
+   화면: 캐시된 것을 즉시 보여주고, 뒤에서 새로 받아 저장한다.
+   정적 파일(아이콘·매니페스트): 캐시 먼저, 없으면 받아서 저장한다.
+   그 밖(POST·외부 도메인)은 아예 가로채지 않는다. */
+self.addEventListener('fetch', function(e){
+  var req = e.request;
+  if (req.method !== 'GET') return;
+
+  var url;
+  try { url = new URL(req.url); } catch (err) { return; }
+  if (url.origin !== self.location.origin) return;     // 외부 API는 그대로 통과
+
+  var isDoc = (req.mode === 'navigate') ||
+              ((req.headers.get('accept') || '').indexOf('text/html') > -1);
+
+  if (isDoc) {
+    e.respondWith(
+      caches.open(SHELL_CACHE).then(function(c){
+        return c.match(ROOT).then(function(hit){
+          var net = fetch(req).then(function(res){
+            if (res && res.ok) { try { c.put(ROOT, res.clone()); } catch (err) {} }
+            return res;
+          }).catch(function(){ return hit; });
+          return hit || net;                            // 있으면 즉시, 없으면 네트워크
+        });
+      }).catch(function(){ return fetch(req); })
+    );
+    return;
+  }
+
+  e.respondWith(
+    caches.match(req).then(function(hit){
+      if (hit) return hit;
+      return fetch(req).then(function(res){
+        if (res && res.ok && res.type === 'basic') {
+          var copy = res.clone();
+          caches.open(SHELL_CACHE).then(function(c){
+            try { c.put(req, copy); } catch (err) {}
+          });
+        }
+        return res;
+      });
+    }).catch(function(){ return fetch(req); })
   );
 });
 
