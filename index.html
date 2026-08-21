@@ -9,7 +9,27 @@
 <meta name="theme-color" content="#ffffff">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="포도야">
-<title>Podoya 🍇</title>
+<title>포도야 🍇 — 폰에서 바로 쓰는 AI 비서</title>
+<meta name="description" content="설치도 가입도 없이 링크 하나로 여는 AI 비서. 대화·검색·날씨·환율·지도·카톡·자동화까지 한 화면에서. 키는 내 폰에만 저장됩니다.">
+
+<!-- ══ 링크 미리보기 (카톡·문자·페북·엑스) ══ -->
+<link rel="canonical" href="https://podoya.ai.kr/">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://podoya.ai.kr/">
+<meta property="og:site_name" content="포도야">
+<meta property="og:locale" content="ko_KR">
+<meta property="og:title" content="포도야 🍇 — 폰에서 바로 쓰는 AI 비서">
+<meta property="og:description" content="설치도 가입도 없이 링크 하나. 대화·검색·날씨·환율·지도·카톡·자동화까지 한 화면에서.">
+<meta property="og:image" content="https://podoya.ai.kr/og.png">
+<meta property="og:image:secure_url" content="https://podoya.ai.kr/og.png">
+<meta property="og:image:type" content="image/png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="포도야 — 폰에서 바로 쓰는 AI 비서">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="포도야 🍇 — 폰에서 바로 쓰는 AI 비서">
+<meta name="twitter:description" content="설치도 가입도 없이 링크 하나. 대화·검색·날씨·환율·지도·카톡·자동화까지 한 화면에서.">
+<meta name="twitter:image" content="https://podoya.ai.kr/og.png">
 <!-- build: license-search -->
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
@@ -3929,6 +3949,9 @@ function openPodoAssist(){
     _asRow('🔗','커넥션 허브','Gmail·슬랙·노션 등 외부앱 연결','asConnect()', {ok:cmp, t:cmp?'연결됨':'연결 필요'})+
     _asRow('🏠','집안 기기','불·플러그·에어컨을 말로','asHome()', {ok:st, t:st?'연결됨':'연결 필요'})+
     _asRow('📮','발송 채널','결과를 어디로 받을지 (포도톡·텔레그램)','asDeliver()')+
+    '<div style="font-size:11.5px;font-weight:800;color:#aaa;margin:18px 2px 6px">알리기 · 연결</div>'+
+    _asRow('📣','친구에게 알리기','카톡으로 포도야 링크 보내기','podoShare()', {ok:true, t:'바로 됨'})+
+    _asRow('💬','포도톡 열기','손님·거래처와 채팅 (podotalk.kr)','podoTalkOpen()', {ok:true, t:'바로 됨'})+
     '<div style="font-size:11.5px;font-weight:800;color:#aaa;margin:18px 2px 6px">이 앱에 대해</div>'+
     _asRow('🔒','키는 이 폰에만','포도야 서버는 아무것도 안 가져가요','openWhy()')+
     '<div style="font-size:11px;color:#bbb;margin-top:16px;line-height:1.6;padding:0 2px">발송·환불처럼 되돌릴 수 없는 일은 실행 전에 항상 확인창을 띄워요.</div>';
@@ -14160,8 +14183,16 @@ try{
   var _rp=(location.search.match(/[?&]report=([^&]+)/)||[])[1];
   if(_rp){ setTimeout(function(){ try{ openRevReport(); briefRun(decodeURIComponent(_rp), true); }catch(e){} }, 700); }
 }catch(e){}
-/* Service Worker 등록 (알림을 이미 켠 사람만 조용히 갱신) */
-try{ if(('serviceWorker' in navigator) && localStorage.getItem('podoai_push_sub')) navigator.serviceWorker.register('sw.js'); }catch(e){}
+/* Service Worker 등록 — 항상 (셸 캐싱 + 알림). 첫 페인트를 막지 않게 load 이후에 */
+try{
+  if(('serviceWorker' in navigator) && location.protocol==='https:'){
+    window.addEventListener('load', function(){
+      navigator.serviceWorker.register('/sw.js')
+        .then(function(reg){ try{ reg.update(); }catch(e){} })
+        .catch(function(){});
+    });
+  }
+}catch(e){}
 window.addEventListener('popstate',function(){
   var nbg=document.getElementById('ainews-bg'), abg=document.getElementById('awork-bg'), vbg=document.getElementById('vmaker-bg');
   if(nbg){ nbg.remove(); history.pushState({podoai:true},'',''); return; }
@@ -15983,6 +16014,90 @@ init();
 })();
 </script>
 <!-- ============ 구글 로그인 & 동기화 블록 끝 ============ -->
-  <script src="podoya-talk.js?v=13"></script>
+  <script src="podoya-talk.js"></script>
+
+<!-- ══════════════════════════════════════════════════════════
+     🍇 공유 & 포도톡 다이렉트  (자체 완결 블록 · 위 코드 무수정)
+       · podoShare()      링크 공유 — 카카오 SDK → 폰 기본 공유 → 복사
+       · podoShareTalk()  포도톡 링크로 초대
+       · podoTalkOpen()   podotalk.kr 바로 열기
+     ══════════════════════════════════════════════════════════ -->
+<script>
+(function(){
+"use strict";
+
+var PODO_LINK = "https://podoya.ai.kr/";
+var PODO_TALK = "https://podotalk.kr/";
+var TITLE     = "포도야 🍇 — 폰에서 바로 쓰는 AI 비서";
+var DESC      = "설치도 가입도 없이 링크 하나. 대화·검색·번역·자동화까지.";
+var IMG       = "https://podoya.ai.kr/og.png";
+
+/* 👇 카카오 JavaScript 키를 넣으면 카톡 리치카드로 공유됩니다.
+      비워두면 폰 기본 공유(카톡 포함)로 자동 전환되니 그대로 둬도 동작합니다.
+      developers.kakao.com → 내 애플리케이션 → 앱 키 → JavaScript 키
+      같은 화면의 [플랫폼 → Web]에 https://podoya.ai.kr 를 꼭 등록하세요. */
+var KAKAO_KEY = "";
+
+function say(m){ try{ showToast(m,'rgba(0,0,0,.85)'); }catch(e){} }
+
+function copyLink(t){
+  try{ navigator.clipboard.writeText(t); say('📋 링크 복사됨 · 붙여넣어 보내세요'); return; }catch(e){}
+  try{
+    var ta=document.createElement('textarea'); ta.value=t;
+    document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove();
+    say('📋 링크 복사됨 · 붙여넣어 보내세요');
+  }catch(e){ try{ prompt('링크', t); }catch(_e){} }
+}
+
+/* 카카오 SDK는 필요할 때만 내려받는다 (첫 로딩을 무겁게 하지 않으려고) */
+var _kakaoTried=false;
+function loadKakao(cb){
+  try{
+    if(window.Kakao && window.Kakao.Share && window.Kakao.isInitialized()) return cb(true);
+    if(!KAKAO_KEY || _kakaoTried) return cb(false);
+    _kakaoTried=true;
+    var s=document.createElement('script');
+    s.src='https://t1.kakaocdn.net/kakao_js_sdk/2.8.1/kakao.min.js';
+    s.async=true;
+    s.onload=function(){
+      try{ if(!window.Kakao.isInitialized()) window.Kakao.init(KAKAO_KEY); cb(true); }catch(e){ cb(false); }
+    };
+    s.onerror=function(){ cb(false); };
+    document.head.appendChild(s);
+  }catch(e){ cb(false); }
+}
+
+/* 링크 공유 — 카카오 → 폰 기본 공유 → 복사 순으로 알아서 내려간다 */
+function podoShare(url, title, desc){
+  url=url||PODO_LINK; title=title||TITLE; desc=desc||DESC;
+  loadKakao(function(ok){
+    if(ok){
+      try{
+        window.Kakao.Share.sendDefault({
+          objectType:'feed',
+          content:{
+            title: title,
+            description: desc,
+            imageUrl: IMG,
+            link:{ mobileWebUrl:url, webUrl:url }
+          },
+          buttons:[{ title:'열어보기', link:{ mobileWebUrl:url, webUrl:url } }]
+        });
+        return;
+      }catch(e){}
+    }
+    if(navigator.share){
+      navigator.share({ title:title, text:desc, url:url }).catch(function(){});
+      return;
+    }
+    copyLink(url);
+  });
+}
+
+window.podoShare     = function(){ podoShare(PODO_LINK, TITLE, DESC); };
+window.podoShareTalk = function(){ podoShare(PODO_TALK, '포도톡 🍇 — 손님·거래처와 바로 채팅', '카톡 친구추가 없이 링크 하나로 대화가 열려요.'); };
+window.podoTalkOpen  = function(){ say('포도톡을 열어요 💬'); setTimeout(function(){ try{ location.href=PODO_TALK; }catch(e){ location.assign(PODO_TALK); } }, 300); };
+})();
+</script>
 </body>
 </html>
