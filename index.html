@@ -2238,6 +2238,7 @@ var PODO_FEATURES = [
   { id:'smarthome',  n:'집안 기기',    icon:FIC_HOME, act:openSmartHome },
   { id:'report',     n:'매일 리포트',  icon:FIC_REPORT, act:openRevReport },
   { id:'doc',        n:'문서 만들기',  icon:FIC_DOC, act:openDocMaker },
+     { id:'ppt',        n:'발표자료',    c:'#f97316', act:function(){ openPptMaker(); } },
   { id:'intl',       n:'해외 응대',    icon:FIC_INTL, act:openIntl },
   { id:'launch',     n:'상품 시작하기', icon:FIC_LAUNCH, act:openLaunch },
   { id:'briefsched', n:'예약브리핑',   icon:FIC_BRIEF, act:openScheduledBriefing },
@@ -16057,6 +16058,7 @@ init();
 </script>
 <!-- ============ 구글 로그인 & 동기화 블록 끝 ============ -->
   <script src="podoya-talk.js"></script>
+   <script src="podo-file.js"></script>
 
 <!-- ══════════════════════════════════════════════════════════
      🍇 공유 & 포도톡 다이렉트  (자체 완결 블록 · 위 코드 무수정)
