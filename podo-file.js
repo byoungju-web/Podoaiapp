@@ -368,6 +368,60 @@ function injectLedgerBtn(){
   anchor.parentNode.insertBefore(b, anchor.nextSibling);
 }
 
+/* 금액칸이 날짜칸을 밀어내서 "2026. 08." 로 잘리던 것 — 폭을 다시 나눈다.
+   금액은 줄어들 수 있게, 날짜는 절대 줄어들지 않게. */
+function fixLedgerFields(){
+  var amt = document.getElementById('ledger-amount');
+  var day = document.getElementById('ledger-date');
+  if(!amt || !day || day.dataset.podoFit) return;
+  amt.style.flex = '1 1 auto';
+  amt.style.minWidth = '0';
+  day.style.flex = '0 0 auto';
+  day.style.minWidth = '132px';
+  day.style.padding = '12px 7px';
+  day.style.fontSize = '12.5px';
+  day.style.textAlign = 'center';
+  day.dataset.podoFit = '1';
+}
+
+/* ── 🍇 포도야 비서 목록에 두 줄 끼워넣기 ─────────────────────────
+   비서 화면은 열 때마다 새로 그려지므로 매번 다시 붙인다.
+   index.html 의 _asRow 와 똑같은 모양으로 만들어 티가 안 나게 한다. */
+function asRowHtml(id, ic, title, sub){
+  return '<button id="' + id + '" style="width:100%;display:flex;align-items:center;gap:12px;background:#fff;border:none;border-bottom:1px solid #f1f1f1;padding:14px 4px;cursor:pointer;font-family:inherit;text-align:left">'+
+    '<span style="font-size:20px;width:26px;flex-shrink:0">' + ic + '</span>'+
+    '<span style="flex:1;min-width:0">'+
+      '<span style="display:flex;align-items:center;gap:6px"><span style="font-size:15px;font-weight:800;color:#111">' + title + '</span>'+
+      '<span style="font-size:10px;font-weight:800;padding:2px 7px;border-radius:6px;background:#f0fdf4;color:#15803d;flex-shrink:0">바로 됨</span></span>'+
+      '<span style="display:block;font-size:11.5px;color:#999;margin-top:2px;line-height:1.45">' + sub + '</span>'+
+    '</span>'+
+    '<span style="color:#ccc;font-size:16px;flex-shrink:0">›</span></button>';
+}
+function injectAssistRows(){
+  var bg = document.getElementById('assist-bg');
+  if(!bg || bg.style.display === 'none') return;
+  if(bg.querySelector('#podo-as-ledger')) return;
+
+  /* "문서 만들기" 줄을 찾아서 그 바로 아래에 넣는다 */
+  var btns = bg.getElementsByTagName('button'), anchor = null;
+  for(var i = 0; i < btns.length; i++){
+    var oc = btns[i].getAttribute('onclick') || '';
+    if(oc.indexOf('asDoc()') >= 0){ anchor = btns[i]; break; }
+  }
+  if(!anchor || !anchor.parentNode) return;
+
+  var box = document.createElement('div');
+  box.innerHTML = asRowHtml('podo-as-ledger', '💰', 'AI 가계부', '영수증 찍으면 경비로 · 엑셀 정산까지')+
+                  asRowHtml('podo-as-ppt',    '📊', '발표자료',  '주제만 적으면 파워포인트(.pptx)로');
+  var rowLedger = box.children[0], rowPpt = box.children[1];
+  rowLedger.onclick = function(){ try{ if(typeof openLedger === 'function') openLedger(); }catch(e){} };
+  rowPpt.onclick    = function(){ try{ openPptMaker(); }catch(e){} };
+
+  var after = anchor.nextSibling;
+  anchor.parentNode.insertBefore(rowLedger, after);
+  anchor.parentNode.insertBefore(rowPpt, rowLedger.nextSibling);
+}
+
 /* 문서 결과가 그려지면 "엑셀로" 버튼을 붙인다 */
 function injectDocBtn(){
   var out = document.getElementById('doc-out');
@@ -381,7 +435,9 @@ function injectDocBtn(){
 /* 화면이 바뀔 때마다 가볍게 확인 (한 번 붙으면 다시 안 붙음) */
 function watch(){
   try{ injectLedgerBtn(); }catch(e){}
+  try{ fixLedgerFields(); }catch(e){}
   try{ injectDocBtn(); }catch(e){}
+  try{ injectAssistRows(); }catch(e){}
 }
 document.addEventListener('click', function(){ setTimeout(watch, 120); }, true);
 setInterval(watch, 1200);
