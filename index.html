@@ -12292,8 +12292,22 @@ function openYoutubeSearch(){
 }
 
 function showToast(msg, bg){
+  bg = bg || 'rgba(0,0,0,.85)';
+  /* 배경이 어두우면 흰 글씨, 밝으면 검은 글씨 — 검정 위 검정을 막는다 */
+  var fg = '#16181f', line = 'rgba(0,0,0,.28)';
+  try{
+    var m = String(bg).match(/(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/), r, g, b;
+    if(m){ r=+m[1]; g=+m[2]; b=+m[3]; }
+    else {
+      var h = String(bg).replace('#','');
+      if(h.length===3) h = h[0]+h[0]+h[1]+h[1]+h[2]+h[2];
+      if(h.length>=6){ r=parseInt(h.slice(0,2),16); g=parseInt(h.slice(2,4),16); b=parseInt(h.slice(4,6),16); }
+    }
+    if(r!=null && (r*299+g*587+b*114)/1000 < 150){ fg='#fff'; line='rgba(255,255,255,.30)'; }
+  }catch(e){}
+
   var t=document.createElement('div');
-  t.style.cssText='position:fixed;bottom:120px;left:50%;transform:translateX(-50%);background:'+bg+';color:#16181f;padding:9px 18px;border-radius:20px;font-size:12px;font-weight:700;z-index:999;pointer-events:none;border:1px solid rgba(0,0,0,.28);white-space:nowrap';
+  t.style.cssText='position:fixed;bottom:120px;left:50%;transform:translateX(-50%);background:'+bg+';color:'+fg+';padding:10px 18px;border-radius:20px;font-size:13px;font-weight:700;z-index:99999;pointer-events:none;border:1px solid '+line+';box-shadow:0 6px 20px rgba(0,0,0,.30);max-width:86vw;text-align:center;line-height:1.4';
   t.textContent=msg;
   document.body.appendChild(t); setTimeout(function(){t.remove();},2200);
 }
