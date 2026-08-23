@@ -438,9 +438,96 @@ function watch(){
   try{ fixLedgerFields(); }catch(e){}
   try{ injectDocBtn(); }catch(e){}
   try{ injectAssistRows(); }catch(e){}
+  try{ injectToolsNotice(); }catch(e){}
 }
 document.addEventListener('click', function(){ setTimeout(watch, 120); }, true);
 setInterval(watch, 1200);
+
+/* ══════════════════════════════════════════════════════════════════
+   4. 🔐 리서치 도구 — 이용권으로 서버 키 쓰기
+   ------------------------------------------------------------------
+   순서: ① 내 키가 있으면 내 키 (한도 없음)
+         ② 없고 이용권이 있으면 워커 (서버 키)
+         ③ 둘 다 없으면 안내
+   기존 firecrawlScrape / exaSearch 를 갈아끼운다. 리서치 파이프라인과
+   MCP 융합검색이 이 둘을 부르므로, 여기만 바꾸면 전부 살아난다.
+   ══════════════════════════════════════════════════════════════════ */
+var TOOLS_API = 'https://podoya-tools.hasin7jk.workers.dev';   /* 워커 주소가 다르면 여기만 고치세요 */
+
+function myKey(k){ try{ return (localStorage.getItem(k) || '').trim(); }catch(e){ return ''; } }
+function licOn(){ try{ return (typeof licActive === 'function') && licActive(); }catch(e){ return false; } }
+function licCodeNow(){ try{ return (window.licCode || '').trim(); }catch(e){ return ''; } }
+
+function toolsCall(path, payload, ok, fail){
+  fetch(TOOLS_API + path, {
+    method:'POST',
+    headers:{ 'Content-Type':'application/json', 'X-Podo-Code': licCodeNow() },
+    body: JSON.stringify(payload)
+  })
+  .then(function(r){ return r.json().then(function(d){ return { s:r.status, d:d }; }); })
+  .then(function(res){
+    if(res.d && res.d.error) throw new Error(res.d.error);
+    if(res.s >= 400) throw new Error('요청이 거절됐어요 (' + res.s + ')');
+    ok(res.d);
+  })
+  .catch(function(e){
+    var m = (e && e.message) || '실패';
+    if(/failed to fetch|networkerror|load failed/i.test(m)) m = '리서치 서버에 연결하지 못했어요. 잠시 뒤 다시 해보세요.';
+    fail(new Error(m));
+  });
+}
+
+var _origScrape = window.firecrawlScrape;
+var _origExa    = window.exaSearch;
+
+if(typeof _origScrape === 'function'){
+  window.firecrawlScrape = function(url, cb, errcb){
+    if(myKey('adv_firecrawl_key')) return _origScrape(url, cb, errcb);
+    if(!licOn()){
+      errcb(new Error('이용권 코드를 등록하면 키 없이 바로 쓸 수 있어요. (설정 → 이용권)'));
+      return;
+    }
+    toolsCall('/scrape', { url: url }, function(d){
+      var md = (d && d.data && (d.data.markdown || d.data.content)) || (d && d.markdown) || '';
+      var title = (d && d.data && d.data.metadata && d.data.metadata.title) || '';
+      if(!md){ errcb(new Error('내용을 가져오지 못했어요 (빈 결과)')); return; }
+      cb(md, title);
+    }, errcb);
+  };
+}
+
+if(typeof _origExa === 'function'){
+  window.exaSearch = function(query, cb, errcb){
+    if(myKey('adv_exa_key')) return _origExa(query, cb, errcb);
+    if(!licOn()){
+      errcb(new Error('이용권 코드를 등록하면 키 없이 바로 쓸 수 있어요. (설정 → 이용권)'));
+      return;
+    }
+    toolsCall('/exa', { query: query }, function(d){
+      var res = (d && d.results) || [];
+      if(!res.length){ errcb(new Error('검색 결과가 없어요')); return; }
+      cb(res);
+    }, errcb);
+  };
+}
+
+/* MCP 융합검색이 "Exa 키 있나?"로 켜지고 꺼진다 — 이용권도 열쇠로 인정 */
+if(typeof window._mcpHasExa === 'function'){
+  window._mcpHasExa = function(){ return !!myKey('adv_exa_key') || licOn(); };
+}
+
+/* 고급기능 화면 위에 "이용권으로 바로 됨" 안내 한 줄 */
+function injectToolsNotice(){
+  var bg = document.getElementById('podoadvf-bg');
+  if(!bg || bg.style.display === 'none') return;
+  if(!licOn() || bg.querySelector('#podo-tools-notice')) return;
+  var w = bg.children[1]; if(!w) return;
+  var note = document.createElement('div');
+  note.id = 'podo-tools-notice';
+  note.style.cssText = 'background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;padding:11px 13px;font-size:13px;color:#15803d;line-height:1.55;margin-bottom:12px';
+  note.innerHTML = '🎟️ <b>이용권이 있어서 키 없이 바로 됩니다.</b><br>아래 키 입력칸은 비워두셔도 돼요. 직접 발급한 키를 넣으면 그쪽이 우선 사용됩니다.';
+  w.insertBefore(note, w.firstChild);
+}
 
 /* ── 전역 공개 ──────────────────────────────────────────────────── */
 window.podoXlsx      = podoXlsx;
@@ -453,5 +540,6 @@ window.closePptMaker = closePptMaker;
 window.pptMake       = pptMake;
 window.pptPreset     = pptPreset;
 window.pptSave       = pptSave;
+window.podoToolsCall = toolsCall;
 
 })();
