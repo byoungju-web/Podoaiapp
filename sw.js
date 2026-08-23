@@ -12,7 +12,10 @@
      뒤에서 새 버전을 받아 다음 실행에 반영한다.
      캐시에 넣는 것은 같은 도메인 GET 뿐이다. 외부 API(워커·AI·카카오)는
      손대지 않으므로 응답이 낡을 일이 없다.
-     배포할 때마다 아래 SHELL_CACHE 의 v 숫자를 올린다. */
+     배포할 때마다 아래 SHELL_CACHE 의 v 숫자를 올린다.
+
+   ※ 2026-08-23 — .js 는 네트워크 우선(1.5초)으로 바꿨다.
+     앱 파일을 고칠 때마다 버전을 올리지 않아도 반영된다. */
 
 var APP = './index.html';
 var SW_VER = '2026-08-23';   // 이 값을 바꾸면 브라우저가 새 파일로 인식한다
@@ -21,6 +24,7 @@ var SW_VER = '2026-08-23';   // 이 값을 바꾸면 브라우저가 새 파일�
 var SHELL_CACHE = 'podoya-shell-v6';                    // 배포 때마다 v2, v3…
 var ROOT = new URL('./', self.location.href).href;      // 예: https://podoya.ai.kr/
 var SHELL = [ROOT, ROOT + 'manifest.json', ROOT + 'podo-192.png'];
+var JS_TIMEOUT = 1500;   // .js 를 이 시간 안에 못 받으면 캐시로 넘어간다
 
 self.addEventListener('install', function(e){
   e.waitUntil(
@@ -81,6 +85,31 @@ self.addEventListener('fetch', function(e){
             return res;
           }).catch(function(){ return hit; });
           return hit || net;                            // 있으면 즉시, 없으면 네트워크
+        });
+      }).catch(function(){ return fetch(req); })
+    );
+    return;
+  }
+
+  /* ── .js 파일: 네트워크 먼저, 1.5초 안 오면 캐시 ──────────
+     앱 파일을 고칠 때마다 SHELL_CACHE 버전을 올리지 않아도
+     최신이 반영되게 한다. 느리거나 오프라인이면 캐시로 즉시 전환.
+     (index.html 은 용량이 커서 지금처럼 캐시 우선으로 둔다) */
+  if (/\.js$/i.test(url.pathname)) {
+    e.respondWith(
+      caches.open(SHELL_CACHE).then(function(c){
+        return c.match(req).then(function(hit){
+          var net = fetch(req).then(function(res){
+            if (res && res.ok && res.type === 'basic') {
+              try { c.put(req, res.clone()); } catch (err) {}
+            }
+            return res;
+          });
+          if (!hit) return net;                     // 캐시에 없으면 기다린다
+          var late = new Promise(function(done){
+            setTimeout(function(){ done(hit); }, JS_TIMEOUT);
+          });
+          return Promise.race([ net.catch(function(){ return hit; }), late ]);
         });
       }).catch(function(){ return fetch(req); })
     );
