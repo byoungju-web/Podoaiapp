@@ -15,10 +15,10 @@
      배포할 때마다 아래 SHELL_CACHE 의 v 숫자를 올린다. */
 
 var APP = './index.html';
-var SW_VER = '2026-08-21';   // 이 값을 바꾸면 브라우저가 새 파일로 인식한다
+var SW_VER = '2026-08-23';   // 이 값을 바꾸면 브라우저가 새 파일로 인식한다
 
 /* ── 셸 캐싱 설정 ───────────────────────────────────────── */
-var SHELL_CACHE = 'podoya-shell-v5';                    // 배포 때마다 v2, v3…
+var SHELL_CACHE = 'podoya-shell-v6';                    // 배포 때마다 v2, v3…
 var ROOT = new URL('./', self.location.href).href;      // 예: https://podoya.ai.kr/
 var SHELL = [ROOT, ROOT + 'manifest.json', ROOT + 'podo-192.png'];
 
