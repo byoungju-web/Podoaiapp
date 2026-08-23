@@ -18,7 +18,7 @@ var APP = './index.html';
 var SW_VER = '2026-08-21';   // 이 값을 바꾸면 브라우저가 새 파일로 인식한다
 
 /* ── 셸 캐싱 설정 ───────────────────────────────────────── */
-var SHELL_CACHE = 'podoya-shell-v3';                    // 배포 때마다 v2, v3…
+var SHELL_CACHE = 'podoya-shell-v4';                    // 배포 때마다 v2, v3…
 var ROOT = new URL('./', self.location.href).href;      // 예: https://podoya.ai.kr/
 var SHELL = [ROOT, ROOT + 'manifest.json', ROOT + 'podo-192.png'];
 
