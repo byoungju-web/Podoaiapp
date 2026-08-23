@@ -10789,7 +10789,7 @@ function rmDots(){var d=document.getElementById('dots');if(d)d.remove();}
 
 function switchTab(tab,el){
   // 하단 탭 전환 시 열려있는 모든 오버레이(브리핑 등)를 닫아 탭이 가려지지 않게 함
-  var _ov=['url-guide-sheet','carddetail-bg','cardscan-bg','cardlist-bg','voiceact-bg','navi-bg','briefing-bg','research-bg','workflow-bg','senior-bg','study-bg','travel-bg','fridge-bg','name-bg','fortune-bg','quiz-bg','obj-bg','ocr-bg','label-bg','biz-bg','ledger-bg','addappbg','myapplistbg','gworkspace-bg','navinbg','alimtalkbg','smsbg','mapbg','gcalbg','kcalbg','nshopbg','upbitbg','kweatherbg','gmailbg','brief-sched-bg','launch-bg','intl-bg','why-bg','doc-bg','report-bg','assist-bg','smarthome-bg','podome-bg','podofeat-bg','podoapp-bg','podomenu-bg','podoadv-bg','podoadvf-bg'];
+  var _ov=['ppt-bg','url-guide-sheet','carddetail-bg','cardscan-bg','cardlist-bg','voiceact-bg','navi-bg','briefing-bg','research-bg','workflow-bg','senior-bg','study-bg','travel-bg','fridge-bg','name-bg','fortune-bg','quiz-bg','obj-bg','ocr-bg','label-bg','biz-bg','ledger-bg','addappbg','myapplistbg','gworkspace-bg','navinbg','alimtalkbg','smsbg','mapbg','gcalbg','kcalbg','nshopbg','upbitbg','kweatherbg','gmailbg','brief-sched-bg','launch-bg','intl-bg','why-bg','doc-bg','report-bg','smarthome-bg','podome-bg','podoadvf-bg','podoadv-bg','assist-bg','podofeat-bg','podoapp-bg','podomenu-bg'];
   for(var _i=0;_i<_ov.length;_i++){ var _e=document.getElementById(_ov[_i]); if(_e) _e.style.display='none'; }
   var tabs=document.querySelectorAll('.tab-item');
   for(var i=0;i<tabs.length;i++) tabs[i].classList.remove('active');
@@ -14271,7 +14271,7 @@ window.addEventListener('popstate',function(){
      하위 화면(고급기능·런처앱·기능)이 열려 있으면 그쪽이 먼저 닫히도록 양보. */
   var _mnB=document.getElementById('podomenu-bg');
   if(_mnB && _mnB.style.display==='flex'){
-    var _subB=['podoadvf-bg','podoadv-bg','podoapp-bg','podofeat-bg','podome-bg','smarthome-bg','assist-bg','report-bg','doc-bg','why-bg','intl-bg','launch-bg'], _subOpen=false;
+    var _subB=['ppt-bg','podoadvf-bg','podoadv-bg','podoapp-bg','podofeat-bg','podome-bg','smarthome-bg','assist-bg','report-bg','doc-bg','why-bg','intl-bg','launch-bg'], _subOpen=false;
     for(var _si=0;_si<_subB.length;_si++){ var _se=document.getElementById(_subB[_si]); if(_se && _se.style.display==='flex'){ _subOpen=true; break; } }
     if(!_subOpen){
       _mnB.style.display='none';
@@ -14282,8 +14282,14 @@ window.addEventListener('popstate',function(){
     }
   }
   var _advf=document.getElementById('podoadvf-bg'), _adv=document.getElementById('podoadv-bg');
-  if((_advf&&_advf.style.display==='flex')||(_adv&&_adv.style.display==='flex')){ if(_advf) _advf.style.display='none'; if(_adv) _adv.style.display='none'; var _mn=document.getElementById('podomenu-bg'); if(_mn){ _mn.style.display='flex'; } else { try{ openPodoMenu(); }catch(e){} } history.pushState({podoai:true},'',''); return; }
-  var ids2=['url-guide-sheet','carddetail-bg','cardscan-bg','cardlist-bg','voiceact-bg','navi-bg','briefing-bg','research-bg','workflow-bg','senior-bg','study-bg','travel-bg','fridge-bg','name-bg','fortune-bg','quiz-bg','obj-bg','ocr-bg','label-bg','biz-bg','ledger-bg','addappbg','myapplistbg','gworkspace-bg','navinbg','alimtalkbg','smsbg','mapbg','gcalbg','kcalbg','nshopbg','upbitbg','kweatherbg','gmailbg','brief-sched-bg','launch-bg','intl-bg','why-bg','doc-bg','report-bg','assist-bg','smarthome-bg','podome-bg','podofeat-bg','podoapp-bg','podomenu-bg','podoadv-bg','podoadvf-bg'];
+  if((_advf&&_advf.style.display==='flex')||(_adv&&_adv.style.display==='flex')){
+    var _asB=document.getElementById('assist-bg');
+    if(_asB && _asB.style.display==='flex'){   /* 비서에서 들어온 화면이면 비서로 돌아간다 */
+      if(_advf) _advf.style.display='none'; if(_adv) _adv.style.display='none';
+      history.pushState({podoai:true},'',''); return;
+    }
+    if(_advf) _advf.style.display='none'; if(_adv) _adv.style.display='none'; var _mn=document.getElementById('podomenu-bg'); if(_mn){ _mn.style.display='flex'; } else { try{ openPodoMenu(); }catch(e){} } history.pushState({podoai:true},'',''); return; }
+  var ids2=['ppt-bg','url-guide-sheet','carddetail-bg','cardscan-bg','cardlist-bg','voiceact-bg','navi-bg','briefing-bg','research-bg','workflow-bg','senior-bg','study-bg','travel-bg','fridge-bg','name-bg','fortune-bg','quiz-bg','obj-bg','ocr-bg','label-bg','biz-bg','ledger-bg','addappbg','myapplistbg','gworkspace-bg','navinbg','alimtalkbg','smsbg','mapbg','gcalbg','kcalbg','nshopbg','upbitbg','kweatherbg','gmailbg','brief-sched-bg','launch-bg','intl-bg','why-bg','doc-bg','report-bg','smarthome-bg','podome-bg','podoadvf-bg','podoadv-bg','assist-bg','podofeat-bg','podoapp-bg','podomenu-bg'];
   for(var pi=0;pi<ids2.length;pi++){var pel=document.getElementById(ids2[pi]);if(pel&&pel.style.display==='flex'){pel.style.display='none';history.pushState({podoai:true},'','');return;}}
   var _cpB=document.getElementById('chatpanel'), _mpB=document.getElementById('mypanel');
   if((_cpB&&_cpB.classList.contains('show'))||(_mpB&&_mpB.classList.contains('show'))){ var _htB=document.querySelector('.t-home'); if(_htB) switchTab('home',_htB); setTimeout(function(){ try{ openPodoMenu(); }catch(e){} }, 40); history.pushState({podoai:true},'',''); return; }
