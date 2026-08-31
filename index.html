@@ -5497,6 +5497,18 @@ function podotalkMsg(t){
   }
   return '';
 }
+/* 포도톡 안에서 열렸는지 본다. 포도톡이 창을 열 때 주소에 ?in=podotalk 을
+   붙여 보낸다. 그때는 아래 '포도톡' 칸을 숨긴다 — 이미 포도톡 안이라
+   그 버튼을 누르면 같은 자리를 맴돌게 된다.
+   podoya.ai.kr 을 직접 열면 표시가 없으므로 예전처럼 그대로 나온다. */
+function inPodotalk(){
+  try {
+    if (String(location.search||"").indexOf("in=podotalk") >= 0) return true;
+    if (String(location.hash||"").indexOf("in=podotalk") >= 0) return true;
+  } catch (e) {}
+  return false;
+}
+
 function goPodotalkOpen(){ try{ window._vansActive=false; }catch(e){} try{ sessionStorage.setItem('from_podoai','1'); }catch(e){} var u='pododa.html#/talk/direct'; try{ location.assign(u); }catch(e){ location.href=u; } }
 
 /* ===== 📤 텔레그램 봇 전송 (무서버 · 브라우저에서 api.telegram.org 직접 호출) ===== */
@@ -10614,6 +10626,7 @@ function makeLauncher(){
     // ── 포도다 등록 카드 (말하기/실행 밑, 더블 사이즈 아이콘 + 상품등록·음식점등록) ──
     var pdo=document.createElement('div');
     pdo.style.cssText='padding:2px 14px 4px';
+    if(inPodotalk()) pdo.style.display='none';
     pdo.innerHTML=
       '<div style="background:linear-gradient(135deg,#faf5ff,#f2e6ff);border:1.5px solid rgba(139,53,224,.28);border-radius:18px;padding:13px 14px;box-shadow:0 4px 18px rgba(139,53,224,.14)">'
         +'<div style="font-size:16px;font-weight:900;color:#7a24c9;letter-spacing:.3px">Podo <span style="font-size:12px;font-weight:700;color:#a855f7">대화 · 통역</span></div>'
@@ -10960,6 +10973,7 @@ function makeHomeSimple(){
   // ── 포도다 카드 ──
   var pdo=document.createElement('div');
   pdo.style.cssText='padding:2px 14px 16px';
+  if(inPodotalk()) pdo.style.display='none';
   pdo.innerHTML=
     '<div style="background:#fff;border:1px solid #ececec;border-radius:22px;padding:15px 16px;box-shadow:0 3px 16px rgba(0,0,0,.05)">'
       
