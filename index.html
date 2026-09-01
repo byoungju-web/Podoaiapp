@@ -10,6 +10,12 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="포도야">
 <title>포도야 🍇 — 폰에서 바로 쓰는 AI 비서</title>
+<style>
+/* 고급 칸 — 평소에는 접혀 있다 */
+#adv-box > summary::-webkit-details-marker{ display:none }
+#adv-box > summary{ border-radius:12px; background:rgba(0,0,0,.035) }
+#adv-box[open] > summary{ background:transparent }
+</style>
 <meta name="description" content="설치도 가입도 없이 링크 하나로 여는 AI 비서. 대화·검색·날씨·환율·지도·카톡·자동화까지 한 화면에서. 키는 내 폰에만 저장됩니다.">
 
 <!-- ══ 링크 미리보기 (카톡·문자·페북·엑스) ══ -->
@@ -695,7 +701,7 @@ body{background:#f4f5fa;display:flex;justify-content:center;min-height:100vh;fon
     </div>
 
     <!-- 크레딧 (포도톡과 같은 지갑) -->
-    <div style="font-size:12px;font-weight:800;color:#1f2430;letter-spacing:1px;padding:0 4px 6px">&#127815; 크레딧</div>
+    <div style="font-size:12px;font-weight:800;color:#1f2430;letter-spacing:1px;padding:0 4px 6px"><img src="/podo-192.png" alt="" style="width:17px;height:17px;border-radius:6px;vertical-align:-3px;margin-right:5px">크레딧</div>
     <div class="my-card" style="padding:16px;margin-bottom:12px">
       <div id="lic-card">
         <div style="font-size:13px;color:#5b6178;line-height:1.7">불러오는 중…</div>
@@ -707,14 +713,20 @@ body{background:#f4f5fa;display:flex;justify-content:center;min-height:100vh;fon
           <button onclick="licSave()" style="flex:0 0 auto;background:linear-gradient(135deg,#a855f7,#6d28d9);border:none;border-radius:11px;padding:11px 16px;color:#fff;font-size:13.5px;font-weight:800;cursor:pointer;font-family:inherit">연결</button>
         </div>
         <div style="font-size:11px;color:#5b6178;margin-top:8px;line-height:1.6">
-          <b>계정 열쇠</b>를 넣는 칸입니다. 포도톡 앱 &rarr; 설정 &rarr; 크레딧 &rarr; <b>열쇠 만들기</b>에서 받으세요.<br>
-          포도톡 안에서 여는 포도AI는 자동으로 붙으니 넣지 않아도 됩니다. 넣지 않아도 무료 기능은 그대로입니다.
+          <b>계정 지갑</b>을 넣는 칸입니다. 포도톡 앱 &rarr; 설정 &rarr; 크레딧 &rarr; <b>지갑 만들기</b>에서 받으세요.<br>
+          넣지 않아도 무료 기능은 그대로 쓸 수 있습니다.
         </div>
       </div>
     </div>
 
-    <!-- AI 사용 방식 -->
-    <div style="font-size:12px;font-weight:800;color:#1f2430;letter-spacing:1px;padding:0 4px 6px">&#127815; AI 사용 방식 (100% 사용자 부담)</div>
+    <!-- 고급 — 내 키 넣기 · Puter. 평소에는 접혀 있다.
+         처음 오신 분은 크레딧만 보면 되고, 키를 다룰 줄 아는 분만 연다.
+         선택지가 하나 줄면 그만큼 안 헷갈린다. -->
+    <details id="adv-box" style="margin-bottom:12px">
+      <summary style="list-style:none;cursor:pointer;font-size:12px;font-weight:800;color:#1f2430;letter-spacing:1px;padding:10px 4px">
+        &#9656; 고급 &middot; 내 키 넣기 (크레딧 절반) &middot; Puter
+      </summary>
+    <div style="font-size:12px;font-weight:800;color:#1f2430;letter-spacing:1px;padding:8px 4px 6px">&#127815; AI 사용 방식 (100% 사용자 부담)</div>
     <div class="my-card" style="padding:16px">
       <div style="font-size:15px;font-weight:700;color:#141720;margin-bottom:3px">무료로 시작 &#183; 고급은 본인 부담</div>
       <div style="font-size:12.5px;color:#141720;margin-bottom:13px">서버 없이 내 폰에서 · AI 요금은 본인 계정에 부과</div>
@@ -831,6 +843,7 @@ body{background:#f4f5fa;display:flex;justify-content:center;min-height:100vh;fon
         <div class="my-row-ar">&#8250;</div>
       </div>
     </div>
+    </details>
 
     <!-- 런처 설정 -->
     <div style="font-size:12px;font-weight:800;color:#1f2430;letter-spacing:1px;padding:8px 4px 6px">&#9881;&#65039; 런처 설정</div>
@@ -1940,7 +1953,7 @@ function licRenderCard(){
   if(!podoTok){
     el.innerHTML='<div style="font-size:13.5px;font-weight:800;color:#1f2430">아직 연결되지 않았어요</div>'
       +'<div style="font-size:12px;color:#5b6178;margin-top:5px;line-height:1.6">'
-      +'지금은 무료 기능만 쓰고 있어요. 포도톡에서 만든 <b>계정 열쇠</b>를 아래에 넣으면 '
+      +'지금은 무료 기능만 쓰고 있어요. 포도톡에서 만든 <b>계정 지갑</b>을 아래에 넣으면 '
       +'포도톡 크레딧을 여기서도 그대로 씁니다.</div>';
     return;
   }
@@ -1977,7 +1990,12 @@ function licRenderCard(){
         +'아래 <b>AI 대화 &middot; 글쓰기</b> 칸에 내 API 키를 넣으면 크레딧이 <b>절반만</b> 나갑니다.</div>')
     +'<button onclick="licRefresh()" style="margin-top:10px;padding:8px 13px;border-radius:10px;border:1px solid rgba(0,0,0,.18);background:#fff;color:#1f2430;font-size:12px;cursor:pointer;font-family:inherit">잔액 새로고침</button>';
 }
-function licRefresh(){ licFetchStatus(function(){ licRenderCard(); }); }
+function licRefresh(){
+  licFetchStatus(function(){
+    licRenderCard();
+    try{ updateMyStatus(); }catch(e){}      /* 맨 위 프로필 줄도 같이 맞춘다 */
+  });
+}
 
 /* 계정 열쇠를 넣어 지갑을 붙인다.
    워커가 열쇠를 토큰으로 바꿔주면, 열쇠는 버리고 토큰만 남긴다. */
@@ -1990,7 +2008,7 @@ function licSave(){
     showToast('연결을 끊었어요','rgba(0,0,0,.85)'); return;
   }
   if(!/^PODO-[A-Z0-9]{4}-[A-Z0-9]{4}$/.test(v)){
-    showToast('열쇠 형식이 달라요 (PODO-XXXX-XXXX)','rgba(0,0,0,.85)'); return;
+    showToast('지갑 번호 형식이 달라요 (PODO-XXXX-XXXX)','rgba(0,0,0,.85)'); return;
   }
 
   showToast('열쇠를 확인하는 중…','rgba(0,0,0,.85)');
@@ -2002,12 +2020,12 @@ function licSave(){
   .then(function(r){ return r.json(); })
   .then(function(d){
     if(!d || !d.ok || !d.token){
-      showToast((d&&d.error) ? d.error : '없는 열쇠예요','rgba(0,0,0,.85)');
+      showToast((d&&d.error) ? d.error : '없는 지갑이에요','rgba(0,0,0,.85)');
       return;
     }
     podoTok=d.token; lsS('podoai_pt', d.token);
     licInfo={ balance:d.balance||0, cost:d.cost||{}, own:d.own||{} };
-    if(inp) inp.value='';                       /* 열쇠는 화면에 남기지 않는다 */
+    if(inp) inp.value='';                       /* 지갑 번호는 화면에 남기지 않는다 */
     licRenderCard();
     showToast('🍇 포도톡 크레딧에 연결했어요 ('+Number(d.balance||0).toLocaleString()+')','rgba(0,0,0,.85)');
   })
@@ -10872,7 +10890,17 @@ function updateMyStatus(){
   try{ var _tgs=document.getElementById('tg-settings-slot'); if(_tgs && typeof tgSettingsCard==='function') _tgs.innerHTML=tgSettingsCard(); }catch(e){}
   var el = document.getElementById('my-api-status');
   if(el){
-    if(aiModel==='puter') el.textContent='🆓 키 없이 무료 (Puter) 사용 중';
+    /* 크레딧이 연결돼 있으면 routeUserAI 가 언제나 그쪽을 먼저 본다.
+       그래서 aiModel 값이 무엇이든 실제로 도는 것은 크레딧이다.
+       표시도 실제로 도는 것을 따라가야 한다. */
+    if(typeof licActive==='function' && licActive()){
+      var _own = (typeof podoOwnKey==='function') ? podoOwnKey() : null;
+      var _b   = (typeof podoBal==='function') ? podoBal() : null;
+      el.textContent = '🍇 포도톡 크레딧으로 사용 중'
+        + (_b===null ? '' : ' · ' + Number(_b).toLocaleString() + ' 남음')
+        + (_own ? ' · 내 키로 절반' : '');
+    }
+    else if(aiModel==='puter') el.textContent='🆓 키 없이 무료 (Puter) 사용 중';
     else if(aiModel==='gemini'&&geminiKey) el.textContent='💎 Gemini (무료) 사용 중';
     else if(aiModel==='claude'&&apiKey) el.textContent='🍇 Claude 사용 중';
     else if(aiModel==='gemini') el.textContent='💎 Gemini 선택됨 · 키 미등록';
