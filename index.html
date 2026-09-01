@@ -694,8 +694,8 @@ body{background:#f4f5fa;display:flex;justify-content:center;min-height:100vh;fon
 
     </div>
 
-    <!-- 이용권 -->
-    <div style="font-size:12px;font-weight:800;color:#1f2430;letter-spacing:1px;padding:0 4px 6px">&#127903;&#65039; 이용권</div>
+    <!-- 크레딧 (포도톡과 같은 지갑) -->
+    <div style="font-size:12px;font-weight:800;color:#1f2430;letter-spacing:1px;padding:0 4px 6px">&#127815; 크레딧</div>
     <div class="my-card" style="padding:16px;margin-bottom:12px">
       <div id="lic-card">
         <div style="font-size:13px;color:#5b6178;line-height:1.7">불러오는 중…</div>
@@ -704,10 +704,11 @@ body{background:#f4f5fa;display:flex;justify-content:center;min-height:100vh;fon
         <div style="display:flex;gap:8px">
           <input id="lic-input" placeholder="PODO-XXXX-XXXX" autocomplete="off" spellcheck="false"
             style="flex:1;background:#eef0f7;border:1.5px solid rgba(0,0,0,.28);border-radius:11px;padding:11px 12px;color:#141720;font-size:14px;outline:none;font-family:monospace;text-transform:uppercase">
-          <button onclick="licSave()" style="flex:0 0 auto;background:linear-gradient(135deg,#a855f7,#6d28d9);border:none;border-radius:11px;padding:11px 16px;color:#fff;font-size:13.5px;font-weight:800;cursor:pointer;font-family:inherit">등록</button>
+          <button onclick="licSave()" style="flex:0 0 auto;background:linear-gradient(135deg,#a855f7,#6d28d9);border:none;border-radius:11px;padding:11px 16px;color:#fff;font-size:13.5px;font-weight:800;cursor:pointer;font-family:inherit">연결</button>
         </div>
         <div style="font-size:11px;color:#5b6178;margin-top:8px;line-height:1.6">
-          이용권이 있으면 <b>고품질 대화 &middot; 웹검색 &middot; 조용한 받아쓰기</b>를 본인 키 없이 쓸 수 있어요. 없어도 무료 기능은 그대로입니다.
+          <b>계정 열쇠</b>를 넣는 칸입니다. 포도톡 앱 &rarr; 설정 &rarr; 크레딧 &rarr; <b>열쇠 만들기</b>에서 받으세요.<br>
+          포도톡 안에서 여는 포도AI는 자동으로 붙으니 넣지 않아도 됩니다. 넣지 않아도 무료 기능은 그대로입니다.
         </div>
       </div>
     </div>
@@ -1611,7 +1612,7 @@ function secAfterUnlock(){
   try{ apiKey=lsG('podoai_k',''); }catch(e){}
   try{ geminiKey=lsG('podoai_gk',''); }catch(e){}
   try{ dgKey=lsG('podoai_dg',''); }catch(e){}
-  try{ licCode=lsG('podoai_lic',''); }catch(e){}
+  try{ podoTok=lsG('podoai_pt',''); }catch(e){}
   try{ webKey=lsG('podoai_wsk',''); }catch(e){}
   try{ if(typeof updateMyStatus==='function') updateMyStatus(); }catch(e){}
   try{ if(typeof refreshLauncher==='function') refreshLauncher(); }catch(e){}
@@ -1746,6 +1747,8 @@ var aiModel = lsG('podoai_model', (function(){
   }catch(e){}
   return 'puter';                                                         /* 새 사용자 → 문을 열어둔다 */
 })()); // 'claude' | 'gemini' | 'puter'
+/* 크레딧이 연결돼 있으면 routeUserAI 가 그쪽을 먼저 보므로 이 값과 무관하다.
+   Puter 로그인 화면은 크레딧이 없을 때만 나온다. */
 // Puter(키리스, User-Pays) 기본 모델 — 사용량은 각 유저가 자기 Puter 계정으로 부담
 var PUTER_MODEL = lsG('podoai_puter_model','gpt-5.4-nano');
 
@@ -1773,7 +1776,7 @@ function callAI(opts, onSuccess, onError){
 }
 
 function routeUserAI(opts, onSuccess, onError){
-  if(licForAI()){                       /* 🎟️ 이용권 — 본인 키가 없을 때만 */
+  if(licForAI()){                       /* 🍇 크레딧 — 본인 키가 있으면 절반만 나간다 */
     callPodo(opts, onSuccess, onError);
   } else if(aiModel === 'puter'){
     callPuter(opts, onSuccess, onError);
@@ -1851,43 +1854,81 @@ function callPuter(opts, onSuccess, onError){
    코드가 있으면 고품질 대화·받아쓰기가 워커를 거친다.
    본인 키가 있으면 본인 키가 먼저다(한도 없음). 둘 다 없으면 무료(Puter). */
 var PODO_API = 'https://podoya-api.hasin7jk.workers.dev';
-var licCode = lsG('podoai_lic','');
-var licInfo = null;   /* {plan, expires, expired, left:{chat,search,stt}} */
 
-function licActive(){ return !!licCode && !(licInfo && licInfo.expired); }
-/* 이용권으로 AI를 돌릴 상황인가 — 본인 키가 있으면 그쪽이 우선 */
-function licForAI(){ return licActive() && !apiKey && !(aiModel==='gemini' && geminiKey); }
+/* ══════════ 크레딧 — 포도톡과 지갑 하나로 ══════════
+   예전에는 이용권 코드를 넣고 "고품질 대화 몇 회 남음" 을 셌다.
+   화폐가 두 개(이용권 횟수 · 포도톡 크레딧)여서 쓰는 사람도 헷갈리고
+   코드도 두 벌이었다. 이제 크레딧 하나로 모은다.
+
+   ── 이 화면이 '누구인지' 를 아는 방법 ──
+   ① 포도톡 안에서 열렸을 때 : 포도톡이 주소에 ?pt=... 로 기기 토큰을
+      넘겨준다. 크롬이 포도톡 안의 포도야 저장소를 따로 관리하기 때문에
+      (저장소 파티셔닝), 이 길이 없으면 포도야는 자기가 누구인지 모른다.
+   ② 브라우저에서 직접 열었을 때 : 계정 열쇠(PODO-XXXX-XXXX)를 한 번
+      넣으면 워커가 토큰으로 바꿔준다. 그 뒤로는 열쇠를 다시 안 쓴다.
+
+   열쇠 자체를 저장해 두지 않는 이유는, 열쇠는 기한이 없어서 새면
+   지갑을 통째로 가져갈 수 있기 때문이다. 토큰은 기한이 있다. */
+var podoTok = lsG('podoai_pt','');
+var licInfo = null;   /* {balance, cost, own} */
+
+/* 주소로 토큰이 왔으면 그것을 쓴다 (포도톡 안에서 열린 경우) */
+(function(){
+  try{
+    var m = /[?&]pt=([^&#]+)/.exec(String(location.search||'') + String(location.hash||''));
+    if(m && m[1]){
+      var t = decodeURIComponent(m[1]);
+      if(t && t !== podoTok){ podoTok = t; lsS('podoai_pt', t); }
+    }
+  }catch(e){}
+})();
+
+function licActive(){ return !!podoTok; }
+/* 크레딧으로 돌릴 상황인가.
+   본인 키가 있어도 워커를 거친다. 대신 절반만 깎인다. 그래야 답이
+   끊기지 않고, 웹검색·받아쓰기까지 같은 길로 흐른다. */
+function licForAI(){ return licActive(); }
+/* 워커에 함께 보낼 본인 키 — 있으면 값이 절반이 된다 */
+function podoOwnKey(){
+  if(aiModel==='gemini' && geminiKey) return {key:geminiKey, provider:'gemini'};
+  if(apiKey) return {key:apiKey, provider:'claude'};
+  return null;
+}
+function podoBal(){ return (licInfo && typeof licInfo.balance==='number') ? licInfo.balance : null; }
 
 function licFetchStatus(cb){
-  if(!licCode){ licInfo=null; if(cb) cb(null); return; }
-  fetch(PODO_API+'/api/status?code='+encodeURIComponent(licCode))
+  if(!podoTok){ licInfo=null; if(cb) cb(null); return; }
+  fetch(PODO_API+'/api/status',{ headers:{'X-Podo-Token':podoTok} })
     .then(function(r){ return r.json(); })
     .then(function(d){ licInfo = (d && d.ok) ? d : null; if(cb) cb(licInfo); })
     ['catch'](function(){ if(cb) cb(null); });
 }
 
-/* 워커를 거쳐 고품질 대화 */
+/* 워커를 거쳐 대화 — 크레딧이 나간다 */
 function callPodo(opts, onSuccess, onError){
+  var own = podoOwnKey();
+  var b = {
+    system: opts.system || '',
+    messages: opts.messages,
+    max_tokens: opts.maxTokens || 500,
+    tier: (opts.tier==='fast') ? 'fast' : 'good'
+  };
+  if(own){ b.ai_key = own.key; b.ai_provider = own.provider; }
   fetch(PODO_API+'/api/chat',{
     method:'POST',
-    headers:{'Content-Type':'application/json','X-Podo-Code':licCode},
-    body:JSON.stringify({
-      system: opts.system || '',
-      messages: opts.messages,
-      max_tokens: opts.maxTokens || 500
-    })
+    headers:{'Content-Type':'application/json','X-Podo-Token':podoTok},
+    body:JSON.stringify(b)
   }).then(function(r){
     return r.json().then(function(d){ return {s:r.status, d:d}; });
   }).then(function(res){
     var d=res.d;
-    if(res.s===402){                       /* 한도·만료 */
-      if(licInfo) licInfo.left = licInfo.left || {};
-      onError(new Error('LIC:'+(d.error||'이용권 한도를 다 썼어요')));
+    if(res.s===402){                       /* 크레딧 부족 */
+      onError(new Error('LIC:'+(d.error||'크레딧이 부족해요')));
       licFetchStatus(function(){ try{ licRenderCard(); }catch(e){} });
       return;
     }
     if(!d || d.error) throw new Error((d&&d.error)||'응답을 받지 못했어요');
-    if(licInfo && licInfo.left && typeof d.left==='number') licInfo.left.chat = d.left;
+    if(licInfo && typeof d.left==='number') licInfo.balance = d.left;
     try{ licRenderCard(); }catch(e){}
     onSuccess((d.text||'').trim());
   })['catch'](onError);
@@ -1895,79 +1936,84 @@ function callPodo(opts, onSuccess, onError){
 
 function licRenderCard(){
   var el=document.getElementById('lic-card'); if(!el) return;
-  var inp=document.getElementById('lic-input');
-  if(inp && !inp.value) inp.value=licCode||'';
 
-  if(!licCode){
-    el.innerHTML='<div style="font-size:13.5px;font-weight:800;color:#1f2430">등록된 이용권이 없어요</div>'
-      +'<div style="font-size:12px;color:#5b6178;margin-top:5px;line-height:1.6">지금은 무료 기능만 쓰고 있어요. 코드를 받으셨다면 아래에 넣어 주세요.</div>';
+  if(!podoTok){
+    el.innerHTML='<div style="font-size:13.5px;font-weight:800;color:#1f2430">아직 연결되지 않았어요</div>'
+      +'<div style="font-size:12px;color:#5b6178;margin-top:5px;line-height:1.6">'
+      +'지금은 무료 기능만 쓰고 있어요. 포도톡에서 만든 <b>계정 열쇠</b>를 아래에 넣으면 '
+      +'포도톡 크레딧을 여기서도 그대로 씁니다.</div>';
     return;
   }
   if(!licInfo){
-    el.innerHTML='<div style="font-size:13.5px;font-weight:800;color:#c2410c">이용권을 확인하지 못했어요</div>'
-      +'<div style="font-size:12px;color:#9a3412;margin-top:5px;line-height:1.6">코드가 맞는지, 인터넷이 되는지 확인해 주세요.</div>'
+    el.innerHTML='<div style="font-size:13.5px;font-weight:800;color:#c2410c">잔액을 확인하지 못했어요</div>'
+      +'<div style="font-size:12px;color:#9a3412;margin-top:5px;line-height:1.6">인터넷이 되는지 확인해 주세요.</div>'
       +'<button onclick="licRefresh()" style="margin-top:10px;padding:9px 14px;border-radius:10px;border:1px solid rgba(0,0,0,.2);background:#fff;color:#1f2430;font-size:12.5px;cursor:pointer;font-family:inherit">다시 확인</button>';
     return;
   }
-  var L=licInfo.left||{}, T=licInfo.todayUsed||{}, C=licInfo.dailyCap||{};
-  if(licInfo.expired){
-    el.innerHTML='<div style="font-size:13.5px;font-weight:800;color:#c2410c">이용권이 만료됐어요</div>'
-      +'<div style="font-size:12px;color:#9a3412;margin-top:5px;line-height:1.6">'+_agentEsc(licInfo.expires)+' 까지였어요. 무료 기능은 계속 쓸 수 있어요.</div>';
-    return;
-  }
-  var bar=function(name, left, used, cap){
+
+  var C=licInfo.cost||{}, O=licInfo.own||{};
+  var own=podoOwnKey();
+  var P=own?O:C;                                  /* 지금 나에게 적용되는 값 */
+  var row=function(name, n){
     return '<div style="display:flex;justify-content:space-between;font-size:12.5px;color:#1f2430;line-height:2">'
-      +'<span>'+name+'</span><span><b>'+(left||0)+'</b> 남음'
-      +(cap?' <span style="color:#8a90a6">· 오늘 '+(used||0)+'/'+cap+'</span>':'')+'</span></div>';
+      +'<span>'+name+'</span><span><b>'+(n||0)+'</b> 크레딧</span></div>';
   };
-  el.innerHTML='<div style="display:flex;align-items:center;gap:7px">'
-      +'<span style="font-size:13.5px;font-weight:800;color:#6d28d9">'+_agentEsc(licInfo.plan)+' 이용권</span>'
-      +'<span style="font-size:11px;color:#7c6aa8">'+_agentEsc(licInfo.expires)+' 까지</span></div>'
-    +'<div style="margin-top:9px;border-top:1px solid rgba(0,0,0,.08);padding-top:8px">'
-      +bar('고품질 대화', L.chat, T.chat, C.chat)
-      +bar('웹검색', L.search, T.search, C.search)
-      +bar('받아쓰기', L.stt, T.stt, C.stt)
-    +'</div>';
+  el.innerHTML=
+     '<div style="text-align:center;padding:4px 0 2px">'
+      +'<div style="font-size:12px;color:#5b6178">남은 크레딧</div>'
+      +'<div style="font-size:32px;font-weight:900;color:#6d28d9;line-height:1.25">'
+        +Number(licInfo.balance||0).toLocaleString()+'</div>'
+      +'<div style="font-size:11px;color:#7c6aa8;margin-top:2px">포도톡과 같은 지갑을 쓰고 있어요</div>'
+    +'</div>'
+    +'<div style="margin-top:10px;border-top:1px solid rgba(0,0,0,.08);padding-top:8px">'
+      +row('빠른 답', P.fast)
+      +row('고품질 답', P.good)
+      +row('웹검색 1회', P.search)
+    +'</div>'
+    +(own
+      ? '<div style="font-size:11px;color:#166534;background:#dcfce7;border-radius:9px;padding:8px 10px;margin-top:9px;line-height:1.6">'
+        +'내 AI 키를 쓰고 있어서 <b>절반만</b> 나갑니다 &#128077;</div>'
+      : '<div style="font-size:11px;color:#5b6178;margin-top:9px;line-height:1.6">'
+        +'아래 <b>AI 대화 &middot; 글쓰기</b> 칸에 내 API 키를 넣으면 크레딧이 <b>절반만</b> 나갑니다.</div>')
+    +'<button onclick="licRefresh()" style="margin-top:10px;padding:8px 13px;border-radius:10px;border:1px solid rgba(0,0,0,.18);background:#fff;color:#1f2430;font-size:12px;cursor:pointer;font-family:inherit">잔액 새로고침</button>';
 }
 function licRefresh(){ licFetchStatus(function(){ licRenderCard(); }); }
+
+/* 계정 열쇠를 넣어 지갑을 붙인다.
+   워커가 열쇠를 토큰으로 바꿔주면, 열쇠는 버리고 토큰만 남긴다. */
 function licSave(){
   var inp=document.getElementById('lic-input');
   var v=((inp&&inp.value)||'').trim().toUpperCase();
-  if(!v){ licCode=''; lsS('podoai_lic',''); licInfo=null; licRenderCard(); showToast('이용권을 지웠어요','rgba(0,0,0,.85)'); return; }
 
-  /* 형식부터 거른다 — 오타를 서버까지 보낼 필요가 없다 */
-  if(!/^PODO-[A-Z0-9]{4}-[A-Z0-9]{4}$/.test(v)){
-    showToast('코드 형식이 달라요 (PODO-XXXX-XXXX)','rgba(0,0,0,.85)'); return;
+  if(!v){
+    podoTok=''; lsS('podoai_pt',''); licInfo=null; licRenderCard();
+    showToast('연결을 끊었어요','rgba(0,0,0,.85)'); return;
   }
-  if(v===licCode && licInfo){ licRefresh(); return; }   /* 같은 코드면 새로고침만 */
+  if(!/^PODO-[A-Z0-9]{4}-[A-Z0-9]{4}$/.test(v)){
+    showToast('열쇠 형식이 달라요 (PODO-XXXX-XXXX)','rgba(0,0,0,.85)'); return;
+  }
 
-  /* 서버가 확인해 준 뒤에만 저장한다.
-     확인 전에 저장하면 엉터리 코드로도 이용권 모드가 켜지고,
-     정작 대화를 걸 때 402 로 막힌다. */
-  var prevCode=licCode, prevInfo=licInfo;
-  showToast('이용권을 확인하는 중…','rgba(0,0,0,.85)');
-
-  fetch(PODO_API+'/api/status?code='+encodeURIComponent(v))
-    .then(function(r){ return r.json(); })
-    .then(function(d){
-      if(!d || !d.ok){
-        licCode=prevCode; licInfo=prevInfo; licRenderCard();
-        showToast((d&&d.msg) ? ('🎟️ '+d.msg) : '없는 이용권 코드예요','rgba(0,0,0,.85)');
-        return;
-      }
-      if(d.expired){
-        licCode=prevCode; licInfo=prevInfo; licRenderCard();
-        showToast('만료된 이용권이에요 ('+d.expires+' 까지)','rgba(0,0,0,.85)');
-        return;
-      }
-      licCode=v; lsS('podoai_lic',v); licInfo=d;      /* 여기서 처음 저장 */
-      licRenderCard();
-      showToast('🎟️ '+d.plan+' 이용권을 등록했어요','rgba(0,0,0,.85)');
-    })
-    ['catch'](function(){
-      licCode=prevCode; licInfo=prevInfo; licRenderCard();
-      showToast('인터넷이 안 돼서 확인하지 못했어요','rgba(0,0,0,.85)');
-    });
+  showToast('열쇠를 확인하는 중…','rgba(0,0,0,.85)');
+  fetch(PODO_API+'/api/link',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({ key:v })
+  })
+  .then(function(r){ return r.json(); })
+  .then(function(d){
+    if(!d || !d.ok || !d.token){
+      showToast((d&&d.error) ? d.error : '없는 열쇠예요','rgba(0,0,0,.85)');
+      return;
+    }
+    podoTok=d.token; lsS('podoai_pt', d.token);
+    licInfo={ balance:d.balance||0, cost:d.cost||{}, own:d.own||{} };
+    if(inp) inp.value='';                       /* 열쇠는 화면에 남기지 않는다 */
+    licRenderCard();
+    showToast('🍇 포도톡 크레딧에 연결했어요 ('+Number(d.balance||0).toLocaleString()+')','rgba(0,0,0,.85)');
+  })
+  ['catch'](function(){
+    showToast('인터넷이 안 돼서 확인하지 못했어요','rgba(0,0,0,.85)');
+  });
 }
 
 function callClaude(opts, onSuccess, onError){
@@ -5031,21 +5077,24 @@ function _recSendPuter(blob, onFail){
     _recApply(t);
   })['catch'](function(e){ if(over) return; over=true; clearTimeout(to); onFail((e&&(e.message||e.error))||'Puter 실패'); });
 }
-/* 이용권으로 받아쓰기 — 워커가 대신 딥그램을 부른다 */
+/* 크레딧으로 받아쓰기 — 워커가 대신 딥그램을 부른다.
+   서버에 받아쓰기 열쇠가 없으면 501 이 온다. 그때는 크레딧을 한 푼도
+   쓰지 않고 예전 음성인식으로 되돌아간다. */
 function _recSendLic(blob, onFail){
   var over=false, to=setTimeout(function(){ if(!over){ over=true; onFail('시간 초과'); } }, 8000);
   var lang=''; try{ lang=_dgLang(); }catch(e){ lang='ko'; }
   fetch(PODO_API+'/api/stt?lang='+encodeURIComponent(lang),{
     method:'POST',
-    headers:{'X-Podo-Code':licCode,'Content-Type':(blob.type||'audio/webm')},
+    headers:{'X-Podo-Token':podoTok,'Content-Type':(blob.type||'audio/webm')},
     body:blob
   }).then(function(r){ return r.json().then(function(d){ return {s:r.status,d:d}; }); })
     .then(function(res){
       if(over) return; over=true; clearTimeout(to);
       var d=res.d;
-      if(res.s===402){ showToast('🎤 '+((d&&d.error)||'받아쓰기 한도를 다 썼어요'),'rgba(0,0,0,.85)'); onFail('quota'); return; }
+      if(res.s===501){ onFail('off'); return; }        /* 서버에 준비 안 됨 — 조용히 넘어간다 */
+      if(res.s===402){ showToast('🍇 '+((d&&d.error)||'크레딧이 부족해요'),'rgba(0,0,0,.85)'); onFail('quota'); return; }
       if(!d || !d.text){ onFail((d&&d.error)||'빈 결과'); return; }
-      if(licInfo && licInfo.left && typeof d.left==='number') licInfo.left.stt=d.left;
+      if(licInfo && typeof d.left==='number') licInfo.balance=d.left;
       _recApply(d.text);
     })['catch'](function(){ if(over) return; over=true; clearTimeout(to); onFail('연결 실패'); });
 }
@@ -6144,23 +6193,24 @@ function nativeFetch(url, opts){
   return fetch(url, opts);
 }
 function webSearch(query, onOk, onErr){
-  /* 🎟️ 본인 키가 없고 이용권이 있으면 워커를 거쳐 검색한다 (본인 키가 있으면 그쪽이 먼저) */
+  /* 🍇 본인 검색 키가 없고 크레딧이 연결돼 있으면 워커를 거쳐 검색한다.
+     본인 검색 키를 넣으신 분은 그쪽이 먼저다 — 값이 안 든다. */
   if(!webKey && typeof licActive==='function' && licActive()){
     fetch(PODO_API+'/api/search',{
       method:'POST',
-      headers:{'Content-Type':'application/json','X-Podo-Code':licCode},
+      headers:{'Content-Type':'application/json','X-Podo-Token':podoTok},
       body:JSON.stringify({query:query, max_results:5})
     }).then(function(r){ return r.json().then(function(d){ return {s:r.status,d:d}; }); })
       .then(function(res){
         var d=res.d;
         if(res.s===402){
-          showToast('🎟️ '+((d&&d.error)||'검색 한도를 다 썼어요'),'rgba(0,0,0,.85)');
+          showToast('🍇 '+((d&&d.error)||'크레딧이 부족해요'),'rgba(0,0,0,.85)');
           licFetchStatus(function(){ try{ licRenderCard(); }catch(e){} });
-          if(onErr) onErr(new Error('LIC:'+((d&&d.error)||'한도')));
+          if(onErr) onErr(new Error('LIC:'+((d&&d.error)||'크레딧 부족')));
           return;
         }
         if(!d || d.error){ if(onErr) onErr(new Error((d&&d.error)||'검색 실패')); return; }
-        if(licInfo && licInfo.left && typeof d.left==='number') licInfo.left.search=d.left;
+        if(licInfo && typeof d.left==='number') licInfo.balance=d.left;
         try{ licRenderCard(); }catch(e){}
         onOk(d.results||[]);
       })['catch'](function(e){ if(onErr) onErr(e); });
