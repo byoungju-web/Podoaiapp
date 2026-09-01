@@ -1990,12 +1990,102 @@ function licRenderCard(){
         +'아래 <b>AI 대화 &middot; 글쓰기</b> 칸에 내 API 키를 넣으면 크레딧이 <b>절반만</b> 나갑니다.</div>')
     +'<button onclick="licRefresh()" style="margin-top:10px;padding:8px 13px;border-radius:10px;border:1px solid rgba(0,0,0,.18);background:#fff;color:#1f2430;font-size:12px;cursor:pointer;font-family:inherit">잔액 새로고침</button>';
 }
+/* ══════════ 구글 로그인 (포도야를 직접 열었을 때) ══════════
+   포도톡 안에서 열리면 이미 토큰을 받았으므로 뜨지 않는다.
+   확인은 포도야 워커 → 포도톡 워커로 넘어간다. 로그인 규칙이 두 벌이
+   되면 언젠가 서로 어긋나므로, 판단하는 곳은 한 군데만 둔다. */
+var PODO_GCID = '1007117932498-2cea0161fftm4ed4ndp5tbkv3899kgpm.apps.googleusercontent.com';
+var _gsiOn = false;
+function pgLoad(cb){
+  if(window.google && google.accounts && google.accounts.id){ cb(true); return; }
+  if(_gsiOn){ setTimeout(function(){ pgLoad(cb); }, 300); return; }
+  _gsiOn = true;
+  var sc=document.createElement('script');
+  sc.src='https://accounts.google.com/gsi/client'; sc.async=true; sc.defer=true;
+  sc.onload=function(){ cb(!!(window.google && google.accounts && google.accounts.id)); };
+  sc.onerror=function(){ cb(false); };
+  document.head.appendChild(sc);
+}
+function pgSend(cred){
+  var m=document.getElementById('pg-msg');
+  if(m) m.textContent='구글 계정을 확인하는 중…';
+  fetch(PODO_API+'/api/login',{
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({ id_token: cred })
+  }).then(function(r){ return r.json(); })
+  .then(function(d){
+    if(!d || !d.ok || !d.token){
+      if(m) m.textContent=(d&&d.error)||'로그인하지 못했어요';
+      return;
+    }
+    podoTok=d.token; lsS('podoai_pt', d.token);
+    licInfo={ balance:d.balance||0, cost:d.cost||{}, own:d.own||{} };
+    pgHide();
+    try{ licRenderCard(); }catch(e){}
+    try{ updateMyStatus(); }catch(e){}
+    showToast(d.gift ? ('환영합니다 · 크레딧 '+d.gift+'개를 드렸어요')
+                     : '로그인했어요','rgba(0,0,0,.85)');
+  })['catch'](function(){ if(m) m.textContent='인터넷이 안 돼서 확인하지 못했어요'; });
+}
+function pgHtml(){
+  return '<div id="pg-gate" style="position:fixed;inset:0;z-index:99999;display:flex;'
+    +'align-items:center;justify-content:center;padding:20px;background:rgba(30,22,52,.55);'
+    +'backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px)">'
+    +'<div style="width:100%;max-width:360px;background:#fff;border-radius:22px;'
+      +'padding:26px 20px 22px;box-shadow:0 18px 50px rgba(0,0,0,.28)">'
+      +'<div style="text-align:center;margin-bottom:20px">'
+        +'<img src="/podo-192.png" alt="" style="width:62px;height:62px;border-radius:19px;display:block;margin:0 auto 13px">'
+        +'<div style="font-size:22px;font-weight:900;letter-spacing:-.5px">포도야</div>'
+        +'<div style="font-size:13px;color:#5b6178;margin-top:6px">AI 자동화 · 통역을 한 곳에서</div>'
+      +'</div>'
+      +'<div style="position:relative">'
+        +'<button id="pg-go" style="width:100%;border:none;border-radius:14px;padding:15px;'
+          +'background:#ede9fe;color:#5b21b6;font-size:15px;font-weight:800;cursor:pointer;'
+          +'font-family:inherit">구글로 시작하기</button>'
+        +'<div id="pg-btn" style="position:absolute;inset:0;opacity:.001;overflow:hidden"></div>'
+      +'</div>'
+      +'<div id="pg-msg" style="font-size:12px;color:#5b6178;text-align:center;margin-top:9px;min-height:16px"></div>'
+      +'<div style="margin-top:16px;border-top:1px solid rgba(0,0,0,.08);padding-top:12px;'
+        +'font-size:11.5px;color:#5b6178;line-height:1.7">'
+        +'포도톡과 크레딧 지갑을 같이 씁니다.<br>포도톡 앱 안에서 열면 저절로 연결됩니다.</div>'
+    +'</div></div>';
+}
+function pgShow(){
+  if(document.getElementById('pg-gate')) return;
+  var d=document.createElement('div'); d.innerHTML=pgHtml();
+  document.body.appendChild(d.firstChild);
+  pgLoad(function(ok){
+    var box=document.getElementById('pg-btn');
+    if(!ok || !box) return;
+    try{
+      google.accounts.id.initialize({
+        client_id: PODO_GCID,
+        callback: function(res){ if(res && res.credential) pgSend(res.credential); },
+        auto_select:false
+      });
+      var w=Math.round(box.getBoundingClientRect().width)||300;
+      if(w<200) w=200; if(w>400) w=400;
+      google.accounts.id.renderButton(box,{type:'standard',theme:'outline',size:'large',
+        text:'continue_with',width:w});
+    }catch(e){}
+  });
+}
+function pgHide(){ var g=document.getElementById('pg-gate'); if(g) g.remove(); }
+function pgCheck(){
+  /* 포도톡 안에서 열렸으면 이미 토큰이 넘어온다. 두 번 묻지 않는다. */
+  try{ if(inPodotalk()) return; }catch(e){}
+  if(!podoTok) pgShow();
+}
+
 function licRefresh(){
   licFetchStatus(function(){
     licRenderCard();
     try{ updateMyStatus(); }catch(e){}      /* 맨 위 프로필 줄도 같이 맞춘다 */
   });
 }
+
+/* 화면이 다 그려진 뒤에 문을 덮는다 */
+try{ setTimeout(function(){ try{ pgCheck(); }catch(e){} }, 600); }catch(e){}
 
 /* 계정 열쇠를 넣어 지갑을 붙인다.
    워커가 열쇠를 토큰으로 바꿔주면, 열쇠는 버리고 토큰만 남긴다. */
