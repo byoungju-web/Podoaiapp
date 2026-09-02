@@ -18,10 +18,10 @@
      앱 파일을 고칠 때마다 버전을 올리지 않아도 반영된다. */
 
 var APP = './index.html';
-var SW_VER = '2026-09-02f';  // 이 값을 바꾸면 브라우저가 새 파일로 인식한다
+var SW_VER = '2026-09-02g';  // 이 값을 바꾸면 브라우저가 새 파일로 인식한다
 
 /* ── 셸 캐싱 설정 ───────────────────────────────────────── */
-var SHELL_CACHE = 'podoya-shell-v23';                   // 배포 때마다 v2, v3…
+var SHELL_CACHE = 'podoya-shell-v24';                   // 배포 때마다 v2, v3…
 var ROOT = new URL('./', self.location.href).href;      // 예: https://podoya.ai.kr/
 var SHELL = [ROOT, ROOT + 'manifest.json', ROOT + 'podo-192.png'];
 var JS_TIMEOUT = 1500;   // .js 를 이 시간 안에 못 받으면 캐시로 넘어간다
@@ -77,14 +77,24 @@ self.addEventListener('fetch', function(e){
               ((req.headers.get('accept') || '').indexOf('text/html') > -1);
 
   if (isDoc) {
+    /* ※ 2026-09-02 — 화면을 '네트워크 먼저' 로 바꿨다.
+       캐시 우선이었을 때, 포도톡 안의 창(iframe)에서 이 화면이 하얗게
+       뜨는 일이 반복됐다. 캐시에 한 번 이상한 것이 들어가면 새로 고쳐도
+       계속 그것만 돌려주기 때문이다.
+       이제 서버 것을 먼저 받고, 안 되면(오프라인) 캐시로 넘어간다.
+       느린 곳에서도 3초 안에 캐시로 전환하므로 화면이 멈추지 않는다. */
     e.respondWith(
       caches.open(SHELL_CACHE).then(function(c){
         return c.match(ROOT).then(function(hit){
           var net = fetch(req).then(function(res){
             if (res && res.ok) { try { c.put(ROOT, res.clone()); } catch (err) {} }
             return res;
-          }).catch(function(){ return hit; });
-          return hit || net;                            // 있으면 즉시, 없으면 네트워크
+          });
+          if (!hit) return net;                    // 캐시에 없으면 기다린다
+          var late = new Promise(function(done){
+            setTimeout(function(){ done(hit); }, 3000);
+          });
+          return Promise.race([ net.catch(function(){ return hit; }), late ]);
         });
       }).catch(function(){ return fetch(req); })
     );
