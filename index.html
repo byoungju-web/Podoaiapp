@@ -841,20 +841,27 @@ body{background:#f4f5fa;display:flex;justify-content:center;min-height:100vh;fon
 
     <!-- API 키 관리 -->
     <div style="font-size:12px;font-weight:800;color:#1f2430;letter-spacing:1px;padding:8px 4px 6px">&#128273; API 키 관리</div>
-    <div class="my-card">
-      <div class="my-row" id="row-claude-key" onclick="openUp()">
-        <div class="my-row-ic" style="background:rgba(0,229,255,.12)">&#129302;</div>
-        <div>
-          <div class="my-row-txt">Claude API 키</div>
-          <div style="font-size:13.5px;color:#141720;margin-top:3px" id="claude-key-sub">미등록</div>
-        </div>
-        <div class="my-row-ar">&#8250;</div>
+    <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:13px;padding:12px 13px;margin-bottom:10px">
+      <div style="font-size:12.5px;font-weight:800;color:#166534">내 키를 넣으면 크레딧이 절반</div>
+      <div style="font-size:11.5px;color:#15803d;margin-top:5px;line-height:1.6">
+        <b>Gemini</b> 키는 구글 계정만 있으면 <b>카드 없이 무료</b>로 받습니다 (하루 1500회).<br>
+        답의 품질은 넣으신 키를 따릅니다.
       </div>
+    </div>
+    <div class="my-card">
       <div class="my-row" id="row-gemini-key" onclick="openGeminiKey()">
         <div class="my-row-ic" style="background:rgba(66,133,244,.12)">&#128142;</div>
         <div>
-          <div class="my-row-txt">Gemini API 키</div>
+          <div class="my-row-txt">Gemini API 키 <span style="font-size:10px;color:#16a34a;font-weight:800">무료 발급</span></div>
           <div style="font-size:13.5px;color:#141720;margin-top:3px" id="gemini-key-sub">미등록 (무료 발급 가능)</div>
+        </div>
+        <div class="my-row-ar">&#8250;</div>
+      </div>
+      <div class="my-row" id="row-claude-key" onclick="openUp()">
+        <div class="my-row-ic" style="background:rgba(0,229,255,.12)">&#129302;</div>
+        <div>
+          <div class="my-row-txt">Claude API 키 <span style="font-size:10px;color:#94a3b8;font-weight:700">유료</span></div>
+          <div style="font-size:13.5px;color:#141720;margin-top:3px" id="claude-key-sub">미등록</div>
         </div>
         <div class="my-row-ar">&#8250;</div>
       </div>
@@ -878,7 +885,7 @@ body{background:#f4f5fa;display:flex;justify-content:center;min-height:100vh;fon
         <div class="my-row-ic" style="background:rgba(255,221,0,.18)">&#128663;</div>
         <div>
           <div class="my-row-txt">카카오 REST API 키 (내비)</div>
-          <div style="font-size:13.5px;color:#141720;margin-top:3px" id="kakao-key-sub">미등록 (선택 · 길안내 좌표)</div>
+          <div style="font-size:13.5px;color:#141720;margin-top:3px" id="kakao-key-sub">미등록 (안 넣어도 길안내는 됩니다)</div>
         </div>
         <div class="my-row-ar">&#8250;</div>
       </div>
@@ -7777,6 +7784,21 @@ function _proxyUrl(){ try{ return (lsG('podoai_proxy','')||(typeof AFF!=='undefi
 // 좌표 얻기: 프록시(카카오 정식) → OSM(다변형) → Photon → 실패(null)
 function _geocode(dest, cb){
   var proxy=_proxyUrl();
+  /* 프록시도 카카오 키도 없는 분이 대부분이다. 그런 분은 워커에 물어본다.
+     카카오는 무료 한도가 넉넉해서 우리 키로 대신 불러도 값이 거의 안 든다.
+     그래서 크레딧을 받지 않는다 — 사용자가 만나야 하는 키가 하나 줄어드는
+     것이 훨씬 값지다. 워커에 키가 없으면 예전처럼 OSM 으로 넘어간다. */
+  if(!proxy){
+    fetch(PODO_API+'/api/geo',{
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({ query:dest })
+    }).then(function(r){ return r.json(); })
+      .then(function(d){
+        if(d && d.ok && d.lat && d.lng) cb(d.lat, d.lng);
+        else _geoOSM(dest, cb);
+      })['catch'](function(){ _geoOSM(dest, cb); });
+    return;
+  }
   if(proxy){
     var key=''; try{ key=lsG('podoai_kakao_rest',''); }catch(e){}
     try{
