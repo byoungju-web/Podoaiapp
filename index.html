@@ -1787,7 +1787,7 @@ function openDgKey(){
   var ov=document.getElementById('dgbg'); if(!ov) return;
   var i=document.getElementById('dg-ki'); if(i) i.value=dgKey||'';
   var e=document.getElementById('dg-err'); if(e) e.style.display='none';
-  ov.style.display='flex'; history.pushState({p:true},'','');
+  ov.style.display='flex'; _pmPush();
 }
 function closeDgKey(){ var ov=document.getElementById('dgbg'); if(ov) ov.style.display='none'; }
 function saveDgKey(){
@@ -2590,6 +2590,13 @@ function podoMakeTile(svc){
    뒤로가기가 앱을 통째로 닫아버렸다. 이름을 세지 않고 '마지막에 연 것'
    을 닫으면 그 일이 다시 생기지 않는다. */
 var _pmStack = [];
+/* 포도톡 안에 끼워져 열렸는지. 그렇다면 방문기록(history)을 건드리면 안 된다.
+   창 안에서 pushState 를 부르면 그 기록이 '포도톡 전체'의 기록에 쌓인다.
+   그래서 포도톡에서 뒤로가기를 눌러도 밖으로 못 나가거나, 화면이 통째로
+   꺼지거나, 포도AI 탭만 안 열리는 일이 생긴다.
+   창 안에서는 화면 위쪽의 '‹' 로만 닫는다. */
+function _inFrame(){ try{ return window.top !== window.self; }catch(e){ return true; } }
+function _pmPush(){ if(_inFrame()) return; try{ history.pushState({p:true},'',''); }catch(e){} }
 function _pmTop(){
   for(var i=_pmStack.length-1;i>=0;i--){
     var el=document.getElementById(_pmStack[i]);
@@ -2652,7 +2659,7 @@ function openPodoAdvanced(){
   });
   bg.appendChild(wrap);
   bg.style.display='flex';
-  history.pushState({p:true},'','');
+  _pmPush();
 }
 function openAdvFeature(id){
   var meta={
@@ -2676,7 +2683,7 @@ function openAdvFeature(id){
   wrap.innerHTML=html;
   bg.appendChild(wrap);
   bg.style.display='flex';
-  history.pushState({p:true},'','');
+  _pmPush();
 }
 
 /* ===== 🔍 웹 스크래핑 (Firecrawl) → 요약 → 예약브리핑 연결 ===== */
@@ -2772,7 +2779,7 @@ function openScrapeTool(){
     +'<button onclick="scRegister()" id="sc-reg" style="display:none;width:100%;margin-top:10px;padding:13px;border-radius:13px;border:1px solid #e0e0e0;background:#fafafa;color:#111;font-size:15.5px;font-weight:700;cursor:pointer;font-family:inherit">📅 이 URL을 예약브리핑으로 등록</button>';
   bg.appendChild(w);
   bg.style.display='flex';
-  history.pushState({p:true},'','');
+  _pmPush();
 }
 
 /* ===== 🧠 시맨틱 검색 (Exa) ===== */
@@ -2845,7 +2852,7 @@ function openSemanticTool(){
     +'<div id="sm-synout" style="display:none;margin-top:10px;background:#f6f7f8;border:1px solid #eaeaea;border-radius:13px;padding:14px;font-size:15px;color:#222;line-height:1.65;white-space:pre-wrap"></div>';
   bg.appendChild(w);
   bg.style.display='flex';
-  history.pushState({p:true},'','');
+  _pmPush();
 }
 /* ===== 🎬 유튜브 → 블로그 (Firecrawl 자막 + AI 변환) ===== */
 function ytToBlog(md, cb, errcb){
@@ -2882,7 +2889,7 @@ function openYtTool(){
     +'<button onclick="ytCopy()" id="yt-copy" style="display:none;width:100%;margin-top:10px;padding:13px;border-radius:13px;border:1px solid #e0e0e0;background:#fafafa;color:#111;font-size:15.5px;font-weight:700;cursor:pointer;font-family:inherit">📋 블로그 글 복사</button>';
   bg.appendChild(w);
   bg.style.display='flex';
-  history.pushState({p:true},'','');
+  _pmPush();
 }
 
 /* ===== 📊 리서치 파이프라인 (검색→스크랩→종합→작성) ===== */
@@ -3054,7 +3061,7 @@ function openResearchTool(){
     +'<button onclick="rpRegister()" id="rp-reg" style="display:none;width:100%;margin-top:8px;padding:12px;border-radius:13px;border:1px solid #e0e0e0;background:#fff;color:#111;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit">📅 매일 자동 리서치로 예약</button>';
   bg.appendChild(w);
   bg.style.display='flex';
-  history.pushState({p:true},'','');
+  _pmPush();
 }
 
 /* ===== 🔗 커넥션 허브 (웹훅 툴 등록·실행) — 1000+ 앱 연결 1단계 ===== */
@@ -3427,7 +3434,7 @@ function openConnectHub(){
   bg.appendChild(w);
   bg.style.display='flex';
   connectHubRender();
-  history.pushState({p:true},'','');
+  _pmPush();
 }
 
 /* ===== 📮 발송 채널 (예약·브리핑 결과를 포도톡/텔레그램/카톡으로) ===== */
@@ -3462,7 +3469,7 @@ function openDeliverSettings(){
       +'<details style="margin-top:9px"><summary style="font-size:11.5px;color:#888;cursor:pointer">🔑 카카오 토큰 받는 법</summary><ol style="margin:7px 0 2px;padding-left:18px;font-size:11.5px;color:#666;line-height:1.8"><li>developers.kakao.com → 내 앱 → 카카오 로그인 활성화</li><li>동의항목에서 <b>카카오톡 메시지 전송(talk_message)</b> 켜기</li><li>OAuth로 <b>access_token</b> 발급(scope: talk_message)</li><li>그 토큰을 위 칸에 붙여넣고 저장</li></ol><div style="font-size:11px;color:#c0392b;margin-top:5px">※ 토큰은 만료가 있어요. 완전 자동으로 쓰려면 텔레그램이 더 편해요.</div></details></div>';
   bg.appendChild(w);
   bg.style.display='flex';
-  history.pushState({p:true},'','');
+  _pmPush();
 }
 
 /* ══════════════════════════════════════════════════════════════
@@ -3667,7 +3674,7 @@ function openRevReport(){
     '<button onclick="repSave()" style="width:100%;margin-top:11px;padding:13px;border-radius:12px;border:none;background:linear-gradient(135deg,#7c3aed,#6d28d9);color:#fff;font-weight:800;font-size:14.5px;cursor:pointer;font-family:inherit">📊 리포트 켜기</button>'+
     (_agentExtOn()?'':'<div style="font-size:11.5px;color:#9a3412;background:#fff7ed;border:1px solid #fed7aa;border-radius:9px;padding:8px 10px;margin-top:9px;line-height:1.55">🔗 먼저 <b>커넥션 허브</b>에서 외부앱을 연결해야 조회가 됩니다.</div>')+
     '<div style="font-size:11px;color:#bbb;margin-top:14px;line-height:1.6">⏰ 폰에서 앱이 열릴 때 예약 시각이 지났으면 그때 실행됩니다. 폰이 자면 못 돌아요.</div>';
-  bg.appendChild(w); bg.style.display='flex'; history.pushState({p:true},'','');
+  bg.appendChild(w); bg.style.display='flex'; _pmPush();
   pushRender();
 }
 function repAdd(i){
@@ -3714,7 +3721,7 @@ function openLaunch(){
     '<textarea id="lc-q" placeholder="예: 강아지 그림 티셔츠 / 수제 원두 드립백 / 캘리그라피 엽서" style="width:100%;box-sizing:border-box;background:#f7f7f8;border:1px solid #e6e6e6;border-radius:11px;padding:11px 12px;font-size:14px;color:#111;outline:none;font-family:inherit;resize:none;min-height:70px;line-height:1.6"></textarea>'+
     '<button onclick="lcRun()" style="width:100%;margin-top:9px;padding:13px;border-radius:12px;border:none;background:linear-gradient(135deg,#7c3aed,#6d28d9);color:#fff;font-weight:800;font-size:14.5px;cursor:pointer;font-family:inherit">✨ 상품으로 만들기</button>'+
     '<div id="lc-out" style="margin-top:14px"></div>';
-  bg.appendChild(w); bg.style.display='flex'; history.pushState({p:true},'','');
+  bg.appendChild(w); bg.style.display='flex'; _pmPush();
 }
 function lcRun(){
   var q=((document.getElementById('lc-q')||{}).value||'').trim();
@@ -3850,7 +3857,7 @@ function openIntl(){
     '</div>'+
     '<button onclick="intlRun()" style="width:100%;padding:13px;border-radius:12px;border:none;background:linear-gradient(135deg,#7c3aed,#6d28d9);color:#fff;font-weight:800;font-size:14.5px;cursor:pointer;font-family:inherit">🌍 번역하고 답장 써주기</button>'+
     '<div id="intl-out" style="margin-top:14px"></div>';
-  bg.appendChild(w); bg.style.display='flex'; history.pushState({p:true},'','');
+  bg.appendChild(w); bg.style.display='flex'; _pmPush();
 }
 function intlTone(v){ window._intlTone=v; openIntl(); }
 function intlRun(){
@@ -3955,7 +3962,7 @@ function openWhy(){
       '<button onclick="_goKeySetup()" style="width:100%;margin-top:10px;padding:11px;border-radius:10px;border:1.5px solid #fed7aa;background:#fff;color:#c2410c;font-weight:800;font-size:13px;cursor:pointer;font-family:inherit">AI 연결 바꾸기 →</button>'+
     '</div>'+
     '<div style="font-size:11.5px;color:#bbb;margin-top:16px;line-height:1.7;padding:0 2px">기능을 늘리는 것보다, <b>안 가져가는 구조</b>를 지키는 걸 더 중요하게 생각해요.</div>';
-  bg.appendChild(w); bg.style.display='flex'; history.pushState({p:true},'','');
+  bg.appendChild(w); bg.style.display='flex'; _pmPush();
 }
 
 /* ══════════════════════════════════════════════════════════════
@@ -4006,7 +4013,7 @@ function openDocMaker(){
       '<button onclick="docSaveMe()" style="width:100%;padding:11px;border-radius:10px;border:1.5px solid #e5dcfb;background:#faf8ff;color:#6d28d9;font-weight:800;font-size:13px;cursor:pointer;font-family:inherit">저장</button>'+
       '</div></details>'+
     '<div id="doc-out" style="margin-top:14px"></div>';
-  bg.appendChild(w); bg.style.display='flex'; history.pushState({p:true},'','');
+  bg.appendChild(w); bg.style.display='flex'; _pmPush();
 }
 function _docF(k,label,dflt){
   var v=String(docMe()[k]||dflt||'');
@@ -4232,7 +4239,7 @@ function openPodoAssist(){
     '<div style="font-size:11.5px;font-weight:800;color:#aaa;margin:18px 2px 6px">이 앱에 대해</div>'+
     _asRow('🔒','키는 이 폰에만','포도야 서버는 아무것도 안 가져가요','openWhy()')+
     '<div style="font-size:11px;color:#bbb;margin-top:16px;line-height:1.6;padding:0 2px">발송·환불처럼 되돌릴 수 없는 일은 실행 전에 항상 확인창을 띄워요.</div>';
-  bg.appendChild(w); bg.style.display='flex'; history.pushState({p:true},'','');
+  bg.appendChild(w); bg.style.display='flex'; _pmPush();
 }
 function asTalk(){ try{ sessionStorage.removeItem('from_podoai'); }catch(e){} try{ location.assign('pododa.html#/talk/room/podo_bot'); }catch(e){ location.href='pododa.html'; } }
 function asWork(){ closePodoAssist(); try{ closePodoMenu(); }catch(e){} setTimeout(function(){ try{ openAutoWork(); }catch(e){} }, 200); }
@@ -4268,7 +4275,7 @@ function openSmartHome(){
     '<button onclick="shRefresh()" style="width:100%;margin-top:11px;padding:12px;border-radius:11px;border:none;background:linear-gradient(135deg,#7c3aed,#6d28d9);color:#fff;font-weight:800;font-size:14px;cursor:pointer;font-family:inherit">🔄 내 기기 불러오기</button>'+
     '<div style="font-size:11px;color:#999;margin-top:6px;line-height:1.5">※ 이걸 해야 AI가 "거실 불"이 어느 기기인지 압니다.</div>'+
     '<div id="sh-out" style="margin-top:14px"></div>';
-  bg.appendChild(w); bg.style.display='flex'; history.pushState({p:true},'','');
+  bg.appendChild(w); bg.style.display='flex'; _pmPush();
   shRender();
 }
 function shSave(){
@@ -4360,7 +4367,7 @@ function openPodoMe(){
       '<button onclick="meAddFactForm()" style="padding:10px 15px;border-radius:11px;border:1.5px solid #e5dcfb;background:#faf8ff;color:#6d28d9;font-weight:800;font-size:13.5px;cursor:pointer;font-family:inherit">＋</button>'+
     '</div>'+
     '<button onclick="meClearAll()" style="width:100%;margin-top:22px;padding:11px;border-radius:11px;border:1px solid #f0d0d0;background:#fff;color:#c04040;font-weight:700;font-size:12.5px;cursor:pointer;font-family:inherit">기억 전체 지우기</button>';
-  bg.appendChild(w); bg.style.display='flex'; history.pushState({p:true},'','');
+  bg.appendChild(w); bg.style.display='flex'; _pmPush();
 }
 function meSaveForm(){
   var m=podoMe(), ks=['name','biz','job','tone','hours','note'];
@@ -4419,7 +4426,7 @@ function openPodoMenu(){
   });
   bg.appendChild(list);
   bg.style.display='flex';
-  history.pushState({p:true},'','');
+  _pmPush();
 }
 function openPodoFeatureGrid(){
   var bg=_pmScreen('podofeat-bg','Podoya 기능', closePodoFeatureGrid);
@@ -4427,7 +4434,7 @@ function openPodoFeatureGrid(){
   PODO_FEATURES.filter(function(f){ return !podoHidden(f.id) && !podoDeleted(f.id); }).forEach(function(f){ grid.appendChild(makeFeatureBtn(f)); });
   bg.appendChild(grid);
   bg.style.display='flex';
-  history.pushState({p:true},'','');
+  _pmPush();
 }
 function openPodoAppGrid(){
   var bg=_pmScreen('podoapp-bg','런처앱', closePodoAppGrid);
@@ -4435,7 +4442,7 @@ function openPodoAppGrid(){
   SV.filter(function(s){ return svAllowed(s.id) && !podoHidden(s.id) && !podoDeleted(s.id); }).forEach(function(s){ grid.appendChild(podoMakeTile(s)); });
   bg.appendChild(grid);
   bg.style.display='flex';
-  history.pushState({p:true},'','');
+  _pmPush();
 }
 
 
@@ -4580,9 +4587,9 @@ function openTravel(){
   var er=document.getElementById('travel-err'); if(er) er.style.display='none';
   var sc=document.querySelectorAll('#travel-style .study-chip'); for(var i=0;i<sc.length;i++) sc[i].classList.remove('on');
   document.getElementById('travel-bg').style.display='flex';
-  history.pushState({p:true},'','');
+  _pmPush();
 }
-function closeTravel(){ document.getElementById('travel-bg').style.display='none'; history.pushState({p:true},'',''); }
+function closeTravel(){ document.getElementById('travel-bg').style.display='none'; _pmPush(); }
 function selTravelDays(el,v){ travelDays=v; var p=el.parentNode.querySelectorAll('.study-chip'); for(var i=0;i<p.length;i++)p[i].classList.remove('on'); el.classList.add('on'); }
 function toggleTravelStyle(el,v){ var i=travelStyles.indexOf(v); if(i>=0){ travelStyles.splice(i,1); el.classList.remove('on'); } else { travelStyles.push(v); el.classList.add('on'); } }
 function travelErr(m){ var e=document.getElementById('travel-err'); if(e){ e.textContent='⚠️ '+m; e.style.display='block'; } }
@@ -4643,9 +4650,9 @@ function openFridge(){
   var er=document.getElementById('fridge-err'); if(er) er.style.display='none';
   var ch=document.querySelectorAll('#fridge-type .study-chip'); for(var i=0;i<ch.length;i++) ch[i].classList.toggle('on', ch[i].getAttribute('data-v')===fridgeType);
   document.getElementById('fridge-bg').style.display='flex';
-  history.pushState({p:true},'','');
+  _pmPush();
 }
-function closeFridge(){ document.getElementById('fridge-bg').style.display='none'; history.pushState({p:true},'',''); }
+function closeFridge(){ document.getElementById('fridge-bg').style.display='none'; _pmPush(); }
 function selFridgeType(el,v){ fridgeType=v; var p=el.parentNode.querySelectorAll('.study-chip'); for(var i=0;i<p.length;i++)p[i].classList.remove('on'); el.classList.add('on'); }
 function fridgeErr(m){ var e=document.getElementById('fridge-err'); if(e){ e.textContent='⚠️ '+m; e.style.display='block'; } }
 function copyFridge(){ var t=document.getElementById('fridge-result').textContent; if(navigator.clipboard) navigator.clipboard.writeText(t).then(function(){ showToast('📋 복사됐어','linear-gradient(135deg,#10b981,#059669)'); }); }
@@ -4673,9 +4680,9 @@ function openNaming(){
   var tc=document.querySelectorAll('#name-target .study-chip'); for(var i=0;i<tc.length;i++) tc[i].classList.toggle('on', tc[i].getAttribute('data-v')===nameTarget);
   var sc=document.querySelectorAll('#name-style .study-chip'); for(var j=0;j<sc.length;j++) sc[j].classList.remove('on');
   document.getElementById('name-bg').style.display='flex';
-  history.pushState({p:true},'','');
+  _pmPush();
 }
-function closeNaming(){ document.getElementById('name-bg').style.display='none'; history.pushState({p:true},'',''); }
+function closeNaming(){ document.getElementById('name-bg').style.display='none'; _pmPush(); }
 function selNameTarget(el,v){ nameTarget=v; var p=el.parentNode.querySelectorAll('.study-chip'); for(var i=0;i<p.length;i++)p[i].classList.remove('on'); el.classList.add('on'); }
 function toggleNameStyle(el,v){ var i=nameStyles.indexOf(v); if(i>=0){ nameStyles.splice(i,1); el.classList.remove('on'); } else { nameStyles.push(v); el.classList.add('on'); } }
 function nameErr(m){ var e=document.getElementById('name-err'); if(e){ e.textContent='⚠️ '+m; e.style.display='block'; } }
@@ -4705,9 +4712,9 @@ function openFortune(){
   var er=document.getElementById('fortune-err'); if(er) er.style.display='none';
   var ch=document.querySelectorAll('#fortune-mode .study-chip'); for(var i=0;i<ch.length;i++) ch[i].classList.toggle('on', ch[i].getAttribute('data-v')===fortuneMode);
   document.getElementById('fortune-bg').style.display='flex';
-  history.pushState({p:true},'','');
+  _pmPush();
 }
-function closeFortune(){ document.getElementById('fortune-bg').style.display='none'; history.pushState({p:true},'',''); }
+function closeFortune(){ document.getElementById('fortune-bg').style.display='none'; _pmPush(); }
 function selFortune(el,v){ fortuneMode=v; var p=el.parentNode.querySelectorAll('.study-chip'); for(var i=0;i<p.length;i++)p[i].classList.remove('on'); el.classList.add('on'); var q=document.getElementById('fortune-q'); if(q) q.placeholder=FORTUNE_PH[v]||''; }
 function fortuneErr(m){ var e=document.getElementById('fortune-err'); if(e){ e.textContent='⚠️ '+m; e.style.display='block'; } }
 function copyFortune(){ var t=document.getElementById('fortune-result').textContent; if(navigator.clipboard) navigator.clipboard.writeText(t).then(function(){ showToast('📋 복사됐어','linear-gradient(135deg,#8b5cf6,#6d28d9)'); }); }
@@ -4737,9 +4744,9 @@ function openQuiz(){
   var er=document.getElementById('quiz-err'); if(er) er.style.display='none';
   syncChips('#quiz-count',quizCount); syncChips('#quiz-type',quizType); syncChips('#quiz-level',quizLevel);
   document.getElementById('quiz-bg').style.display='flex';
-  history.pushState({p:true},'','');
+  _pmPush();
 }
-function closeQuiz(){ document.getElementById('quiz-bg').style.display='none'; history.pushState({p:true},'',''); }
+function closeQuiz(){ document.getElementById('quiz-bg').style.display='none'; _pmPush(); }
 function selQuiz(grp,el,v){ if(grp==='count')quizCount=v; else if(grp==='type')quizType=v; else quizLevel=v; var p=el.parentNode.querySelectorAll('.study-chip'); for(var i=0;i<p.length;i++)p[i].classList.remove('on'); el.classList.add('on'); }
 function quizErr(m){ var e=document.getElementById('quiz-err'); if(e){ e.textContent='⚠️ '+m; e.style.display='block'; } }
 function copyQuiz(){ var t=document.getElementById('quiz-result').textContent; if(navigator.clipboard) navigator.clipboard.writeText(t).then(function(){ showToast('📋 복사됐어','linear-gradient(135deg,#f59e0b,#d97706)'); }); }
@@ -4767,9 +4774,9 @@ function openObject(){
   var q=document.getElementById('obj-q'); if(q) q.value='';
   var fi=document.getElementById('obj-file'); if(fi) fi.value='';
   document.getElementById('obj-bg').style.display='flex';
-  history.pushState({p:true},'','');
+  _pmPush();
 }
-function closeObject(){ document.getElementById('obj-bg').style.display='none'; history.pushState({p:true},'',''); }
+function closeObject(){ document.getElementById('obj-bg').style.display='none'; _pmPush(); }
 function onObjImage(e){ var f=e.target.files[0]; if(!f) return; var r=new FileReader(); r.onload=function(ev){ objImgB64=ev.target.result.split(',')[1]; objImgMime=f.type||'image/jpeg'; document.getElementById('obj-preview').src=ev.target.result; document.getElementById('obj-preview-wrap').style.display='block'; document.getElementById('obj-upload').style.display='none'; }; r.readAsDataURL(f); }
 function clearObjImage(){ objImgB64=null; objImgMime=''; document.getElementById('obj-preview-wrap').style.display='none'; document.getElementById('obj-upload').style.display='block'; var fi=document.getElementById('obj-file'); if(fi) fi.value=''; }
 function objErr(m){ var e=document.getElementById('obj-err'); if(e){ e.textContent='⚠️ '+m; e.style.display='block'; } }
@@ -4799,9 +4806,9 @@ function openOcr(){
   var fi=document.getElementById('ocr-file'); if(fi) fi.value='';
   syncChips('#ocr-mode', ocrMode);
   document.getElementById('ocr-bg').style.display='flex';
-  history.pushState({p:true},'','');
+  _pmPush();
 }
-function closeOcr(){ document.getElementById('ocr-bg').style.display='none'; history.pushState({p:true},'',''); }
+function closeOcr(){ document.getElementById('ocr-bg').style.display='none'; _pmPush(); }
 function onOcrImage(e){ var f=e.target.files[0]; if(!f) return; var r=new FileReader(); r.onload=function(ev){ ocrImgB64=ev.target.result.split(',')[1]; ocrImgMime=f.type||'image/jpeg'; document.getElementById('ocr-preview').src=ev.target.result; document.getElementById('ocr-preview-wrap').style.display='block'; document.getElementById('ocr-upload').style.display='none'; }; r.readAsDataURL(f); }
 function clearOcrImage(){ ocrImgB64=null; ocrImgMime=''; document.getElementById('ocr-preview-wrap').style.display='none'; document.getElementById('ocr-upload').style.display='block'; var fi=document.getElementById('ocr-file'); if(fi) fi.value=''; }
 function selOcr(el,v){ ocrMode=v; var p=el.parentNode.querySelectorAll('.study-chip'); for(var i=0;i<p.length;i++)p[i].classList.remove('on'); el.classList.add('on'); }
@@ -4830,9 +4837,9 @@ function openBiz(){
   var er=document.getElementById('biz-err'); if(er) er.style.display='none';
   syncChips('#biz-task', bizTask); syncChips('#biz-tone', bizTone);
   document.getElementById('biz-bg').style.display='flex';
-  history.pushState({p:true},'','');
+  _pmPush();
 }
-function closeBiz(){ document.getElementById('biz-bg').style.display='none'; history.pushState({p:true},'',''); }
+function closeBiz(){ document.getElementById('biz-bg').style.display='none'; _pmPush(); }
 function selBizTask(el,v){ bizTask=v; var p=el.parentNode.querySelectorAll('.study-chip'); for(var i=0;i<p.length;i++)p[i].classList.remove('on'); el.classList.add('on'); var t=document.getElementById('biz-input'); if(t) t.placeholder=BIZ_PH[v]||''; }
 function selBizTone(el,v){ bizTone=v; var p=el.parentNode.querySelectorAll('.study-chip'); for(var i=0;i<p.length;i++)p[i].classList.remove('on'); el.classList.add('on'); }
 function bizErr(m){ var e=document.getElementById('biz-err'); if(e){ e.textContent='⚠️ '+m; e.style.display='block'; } }
@@ -4911,9 +4918,9 @@ function openLedger(){
   var ai=document.getElementById('ledger-ai-wrap'); if(ai) ai.style.display='none';
   renderLedger();
   document.getElementById('ledger-bg').style.display='flex';
-  history.pushState({p:true},'','');
+  _pmPush();
 }
-function closeLedger(){ document.getElementById('ledger-bg').style.display='none'; history.pushState({p:true},'',''); }
+function closeLedger(){ document.getElementById('ledger-bg').style.display='none'; _pmPush(); }
 function selLedgerCat(el,v){ ledgerCat=v; var p=el.parentNode.querySelectorAll('.study-chip'); for(var i=0;i<p.length;i++)p[i].classList.remove('on'); el.classList.add('on'); }
 function ledgerErr(m){ var e=document.getElementById('ledger-err'); if(e){ e.textContent='⚠️ '+m; e.style.display='block'; } }
 function addLedger(){
@@ -5058,9 +5065,9 @@ function openLabel(){
   syncChips('#label-type', labelType);
   var cc=document.querySelectorAll('#label-concern .study-chip'); for(var i=0;i<cc.length;i++) cc[i].classList.remove('on');
   document.getElementById('label-bg').style.display='flex';
-  history.pushState({p:true},'','');
+  _pmPush();
 }
-function closeLabel(){ document.getElementById('label-bg').style.display='none'; history.pushState({p:true},'',''); }
+function closeLabel(){ document.getElementById('label-bg').style.display='none'; _pmPush(); }
 function onLabelImage(e){ var f=e.target.files[0]; if(!f) return; var r=new FileReader(); r.onload=function(ev){ labelImgB64=ev.target.result.split(',')[1]; labelImgMime=f.type||'image/jpeg'; document.getElementById('label-preview').src=ev.target.result; document.getElementById('label-preview-wrap').style.display='block'; document.getElementById('label-upload').style.display='none'; }; r.readAsDataURL(f); }
 function clearLabelImage(){ labelImgB64=null; labelImgMime=''; document.getElementById('label-preview-wrap').style.display='none'; document.getElementById('label-upload').style.display='block'; var fi=document.getElementById('label-file'); if(fi) fi.value=''; }
 function selLabelType(el,v){ labelType=v; var p=el.parentNode.querySelectorAll('.study-chip'); for(var i=0;i<p.length;i++)p[i].classList.remove('on'); el.classList.add('on'); }
@@ -5513,9 +5520,9 @@ function openSenior(){
   var er=document.getElementById('senior-err'); if(er) er.style.display='none';
   seniorLastAnswer='';
   document.getElementById('senior-bg').style.display='flex';
-  history.pushState({p:true},'','');
+  _pmPush();
 }
-function closeSenior(){ try{ window.speechSynthesis.cancel(); }catch(e){} try{ if(window.Android && window.Android.stopSpeak) window.Android.stopSpeak(); }catch(e){} sttStop(); document.getElementById('senior-bg').style.display='none'; history.pushState({p:true},'',''); }
+function closeSenior(){ try{ window.speechSynthesis.cancel(); }catch(e){} try{ if(window.Android && window.Android.stopSpeak) window.Android.stopSpeak(); }catch(e){} sttStop(); document.getElementById('senior-bg').style.display='none'; _pmPush(); }
 function seniorErr(m){ var e=document.getElementById('senior-err'); if(e){ e.textContent='⚠️ '+m; e.style.display='block'; } }
 function seniorMic(){ sttStart('senior-q','senior-mic','&#127908; 음성으로 말하기','&#9210; 듣는 중... (탭하면 멈춤)'); }
 function speakSeniorAgain(){ if(seniorLastAnswer) speakKo(seniorLastAnswer); }
@@ -5843,7 +5850,7 @@ function openTelegram(){
   }
   tgRenderCard();
   bg.style.display='flex';
-  history.pushState({p:true},'','');
+  _pmPush();
 }
 function closeTelegram(){ var b=document.getElementById('telegram-bg'); if(b) b.style.display='none'; }
 
@@ -5859,7 +5866,7 @@ function openScheduledBriefing(){
   }
   try{ renderBriefsCard(document.getElementById('econbrief-card')); }catch(e){}
   bg.style.display='flex';
-  history.pushState({p:true},'','');
+  _pmPush();
 }
 function closeScheduledBriefing(){ var b=document.getElementById('brief-sched-bg'); if(b) b.style.display='none'; }
 function tgRenderCard(){
@@ -6214,9 +6221,9 @@ function openVoiceAct(){
   var er=vEl('err'); if(er) er.style.display='none';
   voiceActUrl=''; voiceActText=''; voiceActNative='';
   document.getElementById('voiceact-bg').style.display='flex';
-  history.pushState({p:true},'','');
+  _pmPush();
 }
-function closeVoiceAct(){ sttStop(); document.getElementById('voiceact-bg').style.display='none'; history.pushState({p:true},'',''); }
+function closeVoiceAct(){ sttStop(); document.getElementById('voiceact-bg').style.display='none'; _pmPush(); }
 function voiceActMic(){ var px=VOICE_PREFIX; sttStart(VOICE_PREFIX+'-q', VOICE_PREFIX+'-mic','&#127908; 말하기','&#9210; 듣는 중...'); window._sttAutoRun=function(){ VOICE_PREFIX=px; if(px==='uni'){ try{uniRun();}catch(e){} } else if(px==='talk'){ try{talkRun();}catch(e){} } else { try{runVoiceIntent();}catch(e){} } }; }
 function voiceActErr(m){ var e=vEl('err'); if(e){ e.textContent='⚠️ '+m; e.style.display='block'; } }
 function parseRoute(txt){
@@ -6368,7 +6375,14 @@ function vansParse(txt){
 var webProvider = lsG('podoai_wsp','tavily');
 var webKey = lsG('podoai_wsk','');
 var kakaoRest = lsG('podoai_kakao_rest','');
-function hasWebSearch(){ return !!webKey; }
+/* 본인 검색 키가 없어도 크레딧이 붙어 있으면 워커가 대신 검색한다.
+   지금까지는 여기서 false 가 나와 실시간 검색을 아예 시도하지 않았고,
+   대신 브라우저가 직접 외국 사이트를 부르다 CORS 로 막히면서
+   "연결 실패" 만 뜨고 크레딧은 AI 답에만 나갔다. */
+function hasWebSearch(){
+  if (webKey) return true;
+  try { return (typeof licActive === 'function') && licActive(); } catch (e) { return false; }
+}
 /* ===== 네이티브 fetch 브리지 (앱 래퍼에서 CORS 우회) ===== */
 var _nf={}, _nfId=0;
 window.__nfCb=function(id,status,body,err){
@@ -6511,7 +6525,7 @@ function openWebSearchKey(){
   Array.prototype.forEach.call(document.querySelectorAll('#websearch-bg .study-chip'),function(b){ b.className='study-chip'+(b.dataset.p===webProvider?' on':''); });
   var d=document.getElementById('ws-provdesc'); if(d){ var m={tavily:'AI 답변에 추천 · 무료 1,000건/월',exa:'의미(신경망) 검색 · 개발자용',brave:'독립 인덱스 · 프라이버시'}; d.textContent=m[webProvider]||''; }
   try{ wsDiag(); }catch(e){}
-  history.pushState({p:true},'','');
+  _pmPush();
 }
 function closeWebSearchKey(){ var ov=document.getElementById('websearch-bg'); if(ov) ov.style.display='none'; }
 function saveWebSearchKey(){
@@ -8210,23 +8224,17 @@ function voiceAnswer(query){
   // 2.5) 🔀 MCP 병렬 융합: 매칭되는 읽기 소스가 있으면 먼저 (없으면 아래 기존 경로로 낙하)
   if(typeof mcpFusion==='function' && typeof mcpFusionMatch==='function' && mcpFusionMatch(aiQ)){
     vansSpin(ai, '🔀 실시간 데이터 병렬 조회 중…');
-    mcpFusion(aiQ, function(m){ vansSpin(ai, m); }, function(text, srcs){ mcpRender(text, srcs); }, function(){ vansPlainAI(aiQ, true); });
+    mcpFusion(aiQ, function(m){ vansSpin(ai, m); }, function(text, srcs){ mcpRender(text, srcs); },
+      function(){
+        /* 브라우저에서 외부 사이트를 직접 부르다 막힌 것이다(CORS).
+           그냥 포기하지 말고 워커를 거치는 검색으로 한 번 더 간다. */
+        if(typeof hasWebSearch==='function' && hasWebSearch()){ vansWebPath(aiQ, ai); return; }
+        vansPlainAI(aiQ, true);
+      });
     return;
   }
   // 3) 실시간 웹검색 키가 있으면: 웹 검색 → 근거 답변 / 없으면 일반 AI
-  if(typeof hasWebSearch==='function' && hasWebSearch()){
-    var _l=ai.querySelector('span'); if(_l) _l.textContent='🌐 실시간 웹 검색 중...';
-    webSearch(aiQ, function(rs){
-      if(!rs||!rs.length){ vansPlainAI(aiQ); return; }
-      var _l2=ai.querySelector('span'); if(_l2) _l2.textContent='🤖 검색 결과로 답변 정리 중...';
-      var ctx=rs.map(function(x,i){ return '['+(i+1)+'] '+(x.title||'')+'\n'+(x.snippet||'')+'\n출처: '+(x.url||''); }).join('\n\n');
-      var sysW='너는 한국어 답변 도우미야. 아래 "웹 검색 결과"만 근거로 사용자 질문에 정확하고 최신 정보로 답해. 결과에 없는 내용은 지어내지 말고 모른다고 해. 반드시 JSON 객체 하나만 출력(마크다운/설명 금지):\n{"answer":"검색 결과에 근거한 핵심 답변 4~7문장, 문단은 \\n 으로 구분"}\n\n웹 검색 결과:\n'+ctx;
-      callAI({ system:sysW, messages:[{role:'user',content:aiQ}], maxTokens:1000, noLang:true },
-        function(txt){ var d=vansParse(txt); if(!d){ d={answer:String(txt||'').trim()}; } d.sources=rs; vansRenderWeb(d); },
-        function(e){ vansRenderWeb({answer:'', sources:rs}, (e&&e.message)||'오류'); });
-    }, function(){ vansPlainAI(aiQ, true); });
-    return;
-  }
+  if(typeof hasWebSearch==='function' && hasWebSearch()){ vansWebPath(aiQ, ai); return; }
   vansPlainAI(aiQ);
 }
 function vansSpin(el, text){
@@ -8403,6 +8411,20 @@ function puterStream(opts,onDelta,onDone,onError){
 function _aiKey(q){ var x=String(q||'').trim().toLowerCase(), h=0,i; for(i=0;i<x.length;i++){ h=(h*31+x.charCodeAt(i))|0; } var _l=(typeof i18nCur==='function')?i18nCur():'ko'; return 'podoai_ai_'+_l+'_'+h; }
 function aiCacheGet(q){ try{ var v=localStorage.getItem(_aiKey(q)); if(!v) return null; var o=JSON.parse(v); if(!o||(Date.now()-(o.t||0))>6048e5) return null; return o; }catch(e){ return null; } }
 function aiCacheSet(q, patch){ try{ var o=aiCacheGet(q)||{}, p; for(p in patch){ o[p]=patch[p]; } o.t=Date.now(); localStorage.setItem(_aiKey(q), JSON.stringify(o)); }catch(e){} }
+/* 검색 → 그 결과만 근거로 답하기. 두 곳에서 쓰므로 함수로 뺐다. */
+function vansWebPath(aiQ, ai){
+  var _l=ai.querySelector('span'); if(_l) _l.textContent='🌐 실시간 웹 검색 중...';
+  webSearch(aiQ, function(rs){
+    if(!rs||!rs.length){ vansPlainAI(aiQ); return; }
+    var _l2=ai.querySelector('span'); if(_l2) _l2.textContent='🤖 검색 결과로 답변 정리 중...';
+    var ctx=rs.map(function(x,i){ return '['+(i+1)+'] '+(x.title||'')+'\n'+(x.snippet||'')+'\n출처: '+(x.url||''); }).join('\n\n');
+    var sysW='너는 한국어 답변 도우미야. 아래 "웹 검색 결과"만 근거로 사용자 질문에 정확하고 최신 정보로 답해. 결과에 없는 내용은 지어내지 말고 모른다고 해. 반드시 JSON 객체 하나만 출력(마크다운/설명 금지):\n{"answer":"검색 결과에 근거한 핵심 답변 4~7문장, 문단은 \\n 으로 구분"}\n\n웹 검색 결과:\n'+ctx;
+    callAI({ system:sysW, messages:[{role:'user',content:aiQ}], maxTokens:1000, noLang:true },
+      function(txt){ var d=vansParse(txt); if(!d){ d={answer:String(txt||'').trim()}; } d.sources=rs; vansRenderWeb(d); },
+      function(e){ vansRenderWeb({answer:'', sources:rs}, (e&&e.message)||'오류'); });
+  }, function(){ vansPlainAI(aiQ, true); });
+}
+
 function vansPlainAI(query, webFailed){
   var ai=document.getElementById('vans-ai'); if(!ai) return;
   while(ai.firstChild) ai.removeChild(ai.firstChild);
@@ -8463,7 +8485,7 @@ function openUniScreen(title, query, kind){
   var q=document.getElementById('us-q'); if(q) q.value=query||'';
   var er=document.getElementById('us-err'); if(er) er.style.display='none';
   var res=document.getElementById('us-result'); if(res){ res.style.display='none'; res.innerHTML=''; }
-  history.pushState({p:true},'','');
+  _pmPush();
   uniScreenRun();
 }
 function closeUniScreen(){ try{ sttStop(); }catch(e){} var ov=document.getElementById('uniscreen-bg'); if(ov) ov.style.display='none'; }
@@ -9482,13 +9504,13 @@ function openNavi(dest, url){
   var t=document.getElementById('navi-title'); if(t) t.textContent=naviDest||'목적지';
   var note=document.getElementById('navi-note'); if(note) note.textContent='';
   document.getElementById('navi-bg').style.display='flex';
-  history.pushState({p:true},'','');
+  _pmPush();
   naviLoadOverview();
 }
 function closeNavi(){
   if(naviTimer){clearTimeout(naviTimer);naviTimer=null;} if(naviTick){clearInterval(naviTick);naviTick=null;}
   naviStarted=true;
-  document.getElementById('navi-bg').style.display='none'; history.pushState({p:true},'','');
+  document.getElementById('navi-bg').style.display='none'; _pmPush();
 }
 function getNaviApp(){ return lsG('podoai_navi_app','gmap'); }
 function naviLabel(app){ return app==='tmap'?'티맵':(app==='naver'?'네이버지도':'구글맵'); }
@@ -9550,9 +9572,9 @@ function openBriefing(){
   renderBriefTodos();
   briefFetchWeather();
   document.getElementById('briefing-bg').style.display='flex';
-  history.pushState({p:true},'','');
+  _pmPush();
 }
-function closeBriefing(){ document.getElementById('briefing-bg').style.display='none'; history.pushState({p:true},'',''); }
+function closeBriefing(){ document.getElementById('briefing-bg').style.display='none'; _pmPush(); }
 /* ===== 🎬 영상 제작 (힉스필드 씨댄스 2.0 런처) ===== */
 window.vmLen=15;
 function openVideoMaker(){
@@ -9598,7 +9620,7 @@ function openVideoMaker(){
       '</div>'+
     '</div>';
   document.body.appendChild(bg);
-  try{ history.pushState({p:true},'',''); }catch(e){}
+  try{ _pmPush(); }catch(e){}
 }
 function closeVideoMaker(){ var b=document.getElementById('vmaker-bg'); if(b) b.remove(); }
 function vmPickPurpose(el){ window.vmPurpose=el.getAttribute('data-v')||'광고'; var bs=document.querySelectorAll('#vmPurpose .vm-ex'); for(var i=0;i<bs.length;i++) bs[i].classList.toggle('on', bs[i]===el); }
@@ -9698,7 +9720,7 @@ function openAutoWork(){
       '<div style="font-size:10.5px;color:#5b6478;margin-top:18px;line-height:1.6;text-align:center">파이썬이 이 폰 안에서 직접 실행돼요(서버 없음). 파일은 어디에도 올라가지 않아요.</div>'+
     '</div>';
   document.body.appendChild(bg);
-  try{ history.pushState({p:true},'',''); }catch(e){}
+  try{ _pmPush(); }catch(e){}
 }
 function closeAutoWork(){ var b=document.getElementById('awork-bg'); if(b) b.remove(); }
 function awToggleAdv(on){ var e=document.getElementById('aw-ide'); if(e) e.style.display=on?'block':'none'; if(on) awLoadPyodide(function(){}, awStatus); }
@@ -10021,7 +10043,7 @@ function openAINews(force, bbcTried){
       '<div style="text-align:center;padding:50px 0;color:#8b94a8">📰 뉴스를 모으는 중이에요…<br><span style="font-size:11px">'+conf.label+' · 몇 초 걸려요</span></div>'+
     '</div>';
   document.body.appendChild(bg);
-  try{ history.pushState({p:true},'',''); }catch(e){}
+  try{ _pmPush(); }catch(e){}
   var ck='podoai_ainews_'+curCountry(), cache=null;
   try{ cache=JSON.parse(localStorage.getItem(ck)||'null'); }catch(e){}
   if(!force && cache && cache.items && (Date.now()-cache.ts)<600000){ aiNewsRender(cache.items); return; }
@@ -10235,9 +10257,9 @@ function openWorkflow(){
   var res=document.getElementById('workflow-result'); if(res){ res.style.display='none'; res.innerHTML=''; }
   setWorkflowPreset('notice');
   document.getElementById('workflow-bg').style.display='flex';
-  history.pushState({p:true},'','');
+  _pmPush();
 }
-function closeWorkflow(){ document.getElementById('workflow-bg').style.display='none'; history.pushState({p:true},'',''); }
+function closeWorkflow(){ document.getElementById('workflow-bg').style.display='none'; _pmPush(); }
 function setWorkflowPreset(id){
   workflowPreset=id;
   var p=WORKFLOW_PRESETS[id]||WORKFLOW_PRESETS.notice;
@@ -10286,9 +10308,9 @@ function openResearch(){
   var er=document.getElementById('research-err'); if(er) er.style.display='none';
   var res=document.getElementById('research-result'); if(res){ res.style.display='none'; res.innerHTML=''; }
   document.getElementById('research-bg').style.display='flex';
-  history.pushState({p:true},'','');
+  _pmPush();
 }
-function closeResearch(){ document.getElementById('research-bg').style.display='none'; history.pushState({p:true},'',''); }
+function closeResearch(){ document.getElementById('research-bg').style.display='none'; _pmPush(); }
 function _runResearch(qId, errId, resId, goId){
   var t=(document.getElementById(qId).value||'').trim();
   var er=document.getElementById(errId);
@@ -10539,9 +10561,9 @@ function openStudy(){
   var er=document.getElementById('study-err'); if(er) er.style.display='none';
   var fi=document.getElementById('study-file'); if(fi) fi.value='';
   document.getElementById('study-bg').style.display='flex';
-  history.pushState({p:true},'','');
+  _pmPush();
 }
-function closeStudy(){ document.getElementById('study-bg').style.display='none'; history.pushState({p:true},'',''); }
+function closeStudy(){ document.getElementById('study-bg').style.display='none'; _pmPush(); }
 function selStudy(el,v){ studySubject=v; var p=el.parentNode.querySelectorAll('.study-chip'); for(var i=0;i<p.length;i++)p[i].classList.remove('on'); el.classList.add('on'); }
 function onStudyImage(e){
   var f=e.target.files[0]; if(!f) return;
@@ -11178,8 +11200,8 @@ function setPuterModel(m, el){
   if(typeof showToast==='function') showToast('Puter 모델: '+m, 'linear-gradient(135deg,#22d3ee,#0891b2)');
 }
 
-function openGeminiKey(){document.getElementById('geminibg').style.display='flex'; history.pushState({p:true},'','');}
-function closeGeminiKey(){document.getElementById('geminibg').style.display='none'; history.pushState({p:true},'','');}
+function openGeminiKey(){document.getElementById('geminibg').style.display='flex'; _pmPush();}
+function closeGeminiKey(){document.getElementById('geminibg').style.display='none'; _pmPush();}
 
 function verifyGeminiKey(){
   var ki=document.getElementById('gemini-ki'); var k=ki?ki.value.trim():'';
@@ -11301,15 +11323,15 @@ function showHome(){
 
 function openLauncherSettings(){
   var el=document.getElementById('lsbg');
-  if(el){el.style.display='flex'; history.pushState({p:true},'','');}
+  if(el){el.style.display='flex'; _pmPush();}
 }
 function closeLs(){
   var el=document.getElementById('lsbg');
-  if(el){el.style.display='none'; history.pushState({p:true},'','');}
+  if(el){el.style.display='none'; _pmPush();}
 }
 function closePodo(){
   var el=document.getElementById('podobg');
-  if(el){el.style.display='none'; history.pushState({p:true},'','');}
+  if(el){el.style.display='none'; _pmPush();}
 }
 function goToSystemSettings(){
   // APK WebView: Android.openHomeSettings() 호출
@@ -11330,7 +11352,7 @@ function setPodoAsHome(){
     // 웹 브라우저 환경 - 안내 시트 표시
     closeLs();
     var el=document.getElementById('podobg');
-    if(el){el.style.display='flex'; history.pushState({p:true},'','');}
+    if(el){el.style.display='flex'; _pmPush();}
   }
 }
 function showSettingsGuide(){
@@ -11353,7 +11375,7 @@ function showSettingsGuide(){
     +'<button onclick="this.closest(\'div[style]\').remove()" style="width:100%;padding:13px;border-radius:13px;border:none;background:linear-gradient(135deg,#1f2430,#4a5080);color:#fff;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit">확인</button>'
     +'</div>';
   document.body.appendChild(overlay);
-  history.pushState({p:true},'','');
+  _pmPush();
 }
 function deleteAccount(){
   var box=document.createElement('div');
@@ -11368,7 +11390,7 @@ function deleteAccount(){
     +'</div>'
     +'</div>';
   document.body.appendChild(box);
-  history.pushState({p:true},'','');
+  _pmPush();
 }
 function confirmDelete(btn){
   // Clear all localStorage
@@ -11414,11 +11436,11 @@ function saveToGallery(){
 function openGallery(){
   renderGallery();
   document.getElementById('gallerybg').style.display = 'flex';
-  history.pushState({p:true},'','');
+  _pmPush();
 }
 function closeGallery(){
   document.getElementById('gallerybg').style.display = 'none';
-  history.pushState({p:true},'','');
+  _pmPush();
 }
 
 function renderGallery(){
@@ -11494,11 +11516,11 @@ function saveShortsIdea(){
 function openShortsIdeas(){
   renderShortsIdeas();
   document.getElementById('shortssavedbg').style.display = 'flex';
-  history.pushState({p:true},'','');
+  _pmPush();
 }
 function closeShortsIdeas(){
   document.getElementById('shortssavedbg').style.display = 'none';
-  history.pushState({p:true},'','');
+  _pmPush();
 }
 
 function renderShortsIdeas(){
@@ -11611,11 +11633,11 @@ function exportWpResult(){
 function openWriteList(){
   renderWpList();
   document.getElementById('wplistbg').style.display = 'flex';
-  history.pushState({p:true},'','');
+  _pmPush();
 }
 function closeWriteList(){
   document.getElementById('wplistbg').style.display = 'none';
-  history.pushState({p:true},'','');
+  _pmPush();
 }
 
 function renderWpList(){
@@ -11688,11 +11710,11 @@ function openCustom(){
   }
   renderCustomList();
   document.getElementById('custombg').style.display = 'flex';
-  history.pushState({p:true},'','');
+  _pmPush();
 }
 function closeCustom(){
   document.getElementById('custombg').style.display = 'none';
-  history.pushState({p:true},'','');
+  _pmPush();
 }
 
 function renderCustomList(){
@@ -11790,9 +11812,9 @@ function openKakaoAlimtalk(){
   if(s){document.getElementById('alimtalk-apikey').value=s.apikey||'';document.getElementById('alimtalk-sender').value=s.sender||'';}
   document.getElementById('alimtalk-err').style.display='none';
   document.getElementById('alimtalkbg').style.display='flex';
-  history.pushState({p:true},'','');
+  _pmPush();
 }
-function closeAlimtalk(){document.getElementById('alimtalkbg').style.display='none';history.pushState({p:true},'','');}
+function closeAlimtalk(){document.getElementById('alimtalkbg').style.display='none';_pmPush();}
 function saveAlimtalkKey(){
   var k=document.getElementById('alimtalk-apikey').value.trim();
   if(!k){showToast('API 키를 입력해줘','rgba(0,0,0,.85)');return;}
@@ -11825,9 +11847,9 @@ function openNaverSMS(){
   document.getElementById('sms-count').textContent='(0/90)';
   document.getElementById('sms-type').textContent='SMS';
   document.getElementById('smsbg').style.display='flex';
-  history.pushState({p:true},'','');
+  _pmPush();
 }
-function closeSMS(){document.getElementById('smsbg').style.display='none';history.pushState({p:true},'','');}
+function closeSMS(){document.getElementById('smsbg').style.display='none';_pmPush();}
 function saveSMSKey(){
   var d={accessKey:document.getElementById('sms-access-key').value.trim(),secretKey:document.getElementById('sms-secret-key').value.trim(),serviceId:document.getElementById('sms-service-id').value.trim(),from:document.getElementById('sms-from').value.trim().replace(/-/g,'')};
   if(!d.accessKey||!d.secretKey||!d.serviceId||!d.from){showToast('모든 항목을 입력해줘','rgba(0,0,0,.85)');return;}
@@ -11878,11 +11900,11 @@ function openCardScanner(){
   document.getElementById('card-err').style.display = 'none';
   document.getElementById('card-upload-area').style.display = 'block';
   document.getElementById('cardscan-bg').style.display = 'flex';
-  history.pushState({p:true},'','');
+  _pmPush();
 }
 function closeCardScanner(){
   document.getElementById('cardscan-bg').style.display = 'none';
-  history.pushState({p:true},'','');
+  _pmPush();
 }
 
 function onCardImageSelected(e){
@@ -11978,11 +12000,11 @@ function openCardList(){
   renderCardList('');
   document.getElementById('cardlist-bg').style.display = 'flex';
   document.getElementById('cardlist-search').value = '';
-  history.pushState({p:true},'','');
+  _pmPush();
 }
 function closeCardList(){
   document.getElementById('cardlist-bg').style.display = 'none';
-  history.pushState({p:true},'','');
+  _pmPush();
 }
 function filterCards(){
   var q = document.getElementById('cardlist-search').value.trim();
@@ -12093,11 +12115,11 @@ function openCardDetail(card){
   html += '</div>';
   if(content) content.innerHTML = html;
   document.getElementById('carddetail-bg').style.display = 'flex';
-  history.pushState({p:true},'','');
+  _pmPush();
 }
 function closeCardDetail(){
   document.getElementById('carddetail-bg').style.display = 'none';
-  history.pushState({p:true},'','');
+  _pmPush();
 }
 
 /* ── 내 앱 직접 추가 ── */
@@ -12173,8 +12195,8 @@ function openPlayStore(){
   var name=(document.getElementById('addapp-name').value||'앱').trim();
   openUrl('https://play.google.com/store/search?q='+encodeURIComponent(name)+'&c=apps');
 }
-function openUrlGuide(){var g=document.getElementById('url-guide-sheet');if(g){g.style.display='flex';history.pushState({p:true},'','');}}
-function closeUrlGuide(){var g=document.getElementById('url-guide-sheet');if(g){g.style.display='none';history.pushState({p:true},'','');}}
+function openUrlGuide(){var g=document.getElementById('url-guide-sheet');if(g){g.style.display='flex';_pmPush();}}
+function closeUrlGuide(){var g=document.getElementById('url-guide-sheet');if(g){g.style.display='none';_pmPush();}}
 
 function openAddApp(){
   var n=document.getElementById('addapp-name');if(n)n.value='';
@@ -12190,9 +12212,9 @@ function openAddApp(){
   var fco=document.querySelector('.addapp-color');if(fco)fco.classList.add('on');
   updateAddAppPreview();
   var ni=document.getElementById('addapp-name');if(ni)ni.oninput=function(){document.getElementById('addapp-search-result').style.display='none';updateAddAppPreview();};
-  document.getElementById('addappbg').style.display='flex';history.pushState({p:true},'','');
+  document.getElementById('addappbg').style.display='flex';_pmPush();
 }
-function closeAddApp(){document.getElementById('addappbg').style.display='none';history.pushState({p:true},'','');}
+function closeAddApp(){document.getElementById('addappbg').style.display='none';_pmPush();}
 function selAddCat(el,cat){addAppCat=cat;var cats=document.querySelectorAll('.addapp-cat');for(var i=0;i<cats.length;i++)cats[i].classList.remove('on');el.classList.add('on');updateAddAppPreview();}
 function selAddColor(el,color){addAppColor=color;var colors=document.querySelectorAll('.addapp-color');for(var i=0;i<colors.length;i++)colors[i].classList.remove('on');el.classList.add('on');updateAddAppPreview();}
 function updateAddAppPreview(){
@@ -12222,8 +12244,8 @@ function saveAddApp(){
   actCat=addAppCat;showHome();
   showToast('✅ '+name+' 이 '+addAppCat+' 카테고리에 추가됐어!','linear-gradient(135deg,#00e5ff,#7b61ff)');
 }
-function openMyAppList(){renderMyAppList();document.getElementById('myapplistbg').style.display='flex';history.pushState({p:true},'','');}
-function closeMyAppList(){document.getElementById('myapplistbg').style.display='none';history.pushState({p:true},'','');}
+function openMyAppList(){renderMyAppList();document.getElementById('myapplistbg').style.display='flex';_pmPush();}
+function closeMyAppList(){document.getElementById('myapplistbg').style.display='none';_pmPush();}
 function renderMyAppList(){
   var list=document.getElementById('my-app-list'),count=document.getElementById('my-app-count');
   var apps=getMyApps();if(count)count.textContent=apps.length+'개';list.innerHTML='';
@@ -12288,9 +12310,9 @@ function openGoogleWorkspace(type){
       openUrl(cfg.newUrl);
     },function(){resEl.textContent='AI 불가. API 키를 설정해줘.';});
   };
-  bg.style.display='flex';history.pushState({p:true},'','');
+  bg.style.display='flex';_pmPush();
 }
-function closeGWorkspace(){document.getElementById('gworkspace-bg').style.display='none';history.pushState({p:true},'','');}
+function closeGWorkspace(){document.getElementById('gworkspace-bg').style.display='none';_pmPush();}
 
 // 내비게이션
 var naviMode='car';
@@ -12305,11 +12327,11 @@ function openNaverNavi(){
   document.getElementById('navi-err').style.display='none';
   renderNaviRecent();
   document.getElementById('navinbg').style.display='flex';
-  history.pushState({p:true},'','');
+  _pmPush();
   setTimeout(function(){var t=document.getElementById('navi-to');if(t)t.focus();},300);
 }
 function openNaverNaviGPS(){openNaverNavi();useMyLocForNavi();}
-function closeNavin(){document.getElementById('navinbg').style.display='none';history.pushState({p:true},'','');}
+function closeNavin(){document.getElementById('navinbg').style.display='none';_pmPush();}
 function selNaviMode(el,mode){
   naviMode=mode;
   var modes=document.querySelectorAll('.navi-mode');
@@ -12410,9 +12432,9 @@ function openMapSearch(mode){
     fbox.appendChild(b);
   });}
   var inp=document.getElementById('map-search-input');if(inp){inp.value='';inp.focus();}
-  document.getElementById('mapbg').style.display='flex';history.pushState({p:true},'','');
+  document.getElementById('mapbg').style.display='flex';_pmPush();
 }
-function closeMap(){document.getElementById('mapbg').style.display='none';history.pushState({p:true},'','');}
+function closeMap(){document.getElementById('mapbg').style.display='none';_pmPush();}
 function doMapSearch(){
   var q=document.getElementById('map-search-input').value.trim();
   if(!q){showToast('검색어를 입력해줘','rgba(0,0,0,.85)');return;}
@@ -12432,9 +12454,9 @@ var GCAL_KEY='podoai_gcal_client_id',GCAL_TOKEN_KEY='podoai_gcal_token';
 function connectGoogleCal(){
   var saved=lsG(GCAL_KEY,'');
   var el=document.getElementById('gcal-client-id');if(el&&saved)el.value=saved;
-  document.getElementById('gcalbg').style.display='flex';history.pushState({p:true},'','');
+  document.getElementById('gcalbg').style.display='flex';_pmPush();
 }
-function closeGCal(){document.getElementById('gcalbg').style.display='none';history.pushState({p:true},'','');}
+function closeGCal(){document.getElementById('gcalbg').style.display='none';_pmPush();}
 function saveGCalConfig(){
   var cid=document.getElementById('gcal-client-id').value.trim();
   if(!cid||!cid.includes('googleusercontent.com')){document.getElementById('gcal-err').textContent='올바른 클라이언트 ID를 입력해줘';document.getElementById('gcal-err').style.display='block';return;}
@@ -12460,9 +12482,9 @@ var KCAL_KEY='podoai_kcal_app_key',KCAL_TOKEN_KEY='podoai_kcal_token';
 function connectKakaoCal(){
   var saved=lsG(KCAL_KEY,'');
   var el=document.getElementById('kcal-app-key');if(el&&saved)el.value=saved;
-  document.getElementById('kcalbg').style.display='flex';history.pushState({p:true},'','');
+  document.getElementById('kcalbg').style.display='flex';_pmPush();
 }
-function closeKCal(){document.getElementById('kcalbg').style.display='none';history.pushState({p:true},'','');}
+function closeKCal(){document.getElementById('kcalbg').style.display='none';_pmPush();}
 function saveKCalConfig(){
   var key=document.getElementById('kcal-app-key').value.trim();
   if(!key||key.length<10){document.getElementById('kcal-err').textContent='앱 키를 입력해줘';document.getElementById('kcal-err').style.display='block';return;}
@@ -12515,10 +12537,10 @@ function openNShop(){
   var sorts=document.querySelectorAll('.nshop-sort');for(var i=0;i<sorts.length;i++)sorts[i].classList.remove('on');
   var first=document.querySelector('.nshop-sort');if(first)first.classList.add('on');
   var inp=document.getElementById('nshop-input');if(inp)inp.value='';
-  document.getElementById('nshopbg').style.display='flex';history.pushState({p:true},'','');
+  document.getElementById('nshopbg').style.display='flex';_pmPush();
   setTimeout(function(){var inp=document.getElementById('nshop-input');if(inp)inp.focus();},300);
 }
-function closeNShop(){document.getElementById('nshopbg').style.display='none';history.pushState({p:true},'','');}
+function closeNShop(){document.getElementById('nshopbg').style.display='none';_pmPush();}
 function selNShopSort(el,sort){nshopSort=sort;var btns=document.querySelectorAll('.nshop-sort');for(var i=0;i<btns.length;i++)btns[i].classList.remove('on');el.classList.add('on');}
 function doNShopSearch(){var q=document.getElementById('nshop-input').value.trim();if(!q){showToast('검색어를 입력해줘','rgba(0,0,0,.85)');return;}openUrl('https://search.shopping.naver.com/search/all?query='+encodeURIComponent(q)+'&sort='+nshopSort);}
 function doNShopCat(cat){openUrl('https://search.shopping.naver.com/search/all?query='+encodeURIComponent(cat)+'&sort='+nshopSort);}
@@ -12533,8 +12555,8 @@ var UPBIT_TICKERS=[
   {id:'KRW-ADA',name:'에이다',symbol:'ADA',color:'#0033AD'},
   {id:'KRW-AVAX',name:'아발란체',symbol:'AVAX',color:'#E84142'}
 ];
-function openUpbit(){document.getElementById('upbitbg').style.display='flex';history.pushState({p:true},'','');fetchUpbitData();}
-function closeUpbit(){document.getElementById('upbitbg').style.display='none';history.pushState({p:true},'','');}
+function openUpbit(){document.getElementById('upbitbg').style.display='flex';_pmPush();fetchUpbitData();}
+function closeUpbit(){document.getElementById('upbitbg').style.display='none';_pmPush();}
 function fetchUpbitData(){
   var list=document.getElementById('upbit-list'),upd=document.getElementById('upbit-updated');
   if(list)list.innerHTML='<div style="text-align:center;padding:20px;color:#1f2430">⏳ 불러오는 중...</div>';
@@ -12573,9 +12595,9 @@ var WI={0:'☀️',1:'🌤',2:'⛅',3:'☁️',45:'🌫',48:'🌫',51:'🌦',53:
 function openKWeather(){
   var kw=document.getElementById('kw-detail');if(kw)kw.style.display='none';
   var cur=document.getElementById('kw-current');if(cur)cur.innerHTML='<div style="text-align:center;color:rgba(0,0,0,.5);font-size:13px">📍 지역 선택 또는 현재 위치 버튼</div>';
-  document.getElementById('kweatherbg').style.display='flex';history.pushState({p:true},'','');
+  document.getElementById('kweatherbg').style.display='flex';_pmPush();
 }
-function closeKWeather(){document.getElementById('kweatherbg').style.display='none';history.pushState({p:true},'','');}
+function closeKWeather(){document.getElementById('kweatherbg').style.display='none';_pmPush();}
 function fetchKWeatherByLocation(){
   if(!navigator.geolocation){showToast('위치 권한이 필요해요','rgba(0,0,0,.85)');return;}
   var cur=document.getElementById('kw-current');if(cur)cur.innerHTML='<div style="text-align:center;color:rgba(0,0,0,.6)">📡 위치 확인 중...</div>';
@@ -12607,9 +12629,9 @@ function openGmailSheet(){
   var t=document.getElementById('gmail-to');if(t)t.value='';
   var s=document.getElementById('gmail-subject');if(s)s.value='';
   var p=document.getElementById('gmail-prompt');if(p)p.value='';
-  document.getElementById('gmailbg').style.display='flex';history.pushState({p:true},'','');
+  document.getElementById('gmailbg').style.display='flex';_pmPush();
 }
-function closeGmailSheet(){document.getElementById('gmailbg').style.display='none';history.pushState({p:true},'','');}
+function closeGmailSheet(){document.getElementById('gmailbg').style.display='none';_pmPush();}
 function draftGmail(){
   var to=document.getElementById('gmail-to').value.trim();
   var subject=document.getElementById('gmail-subject').value.trim();
@@ -13132,7 +13154,7 @@ function openShortsPreview(){
   phone.appendChild(bar2);
 
   ov.appendChild(phone);
-  if(typeof history!=='undefined' && history.pushState) history.pushState({p:true},'','');
+  if(typeof history!=='undefined' && history.pushState) _pmPush();
 
   _reel.scenes=[]; _reel.imgs=[]; _reel.idx=0; _reel.elapsed=0; _reel.ended=false; _reel.playing=false;
   _reelBuildScenes(script, topic, shortsStyle, function(scenes){
@@ -13752,11 +13774,11 @@ function renderHistList(){
 function openHistPanel(){
   renderHistList();
   document.getElementById('histbg').classList.add('open');
-  history.pushState({p:true},'','');
+  _pmPush();
 }
 function closeHistPanel(){
   document.getElementById('histbg').classList.remove('open');
-  history.pushState({p:true},'','');
+  _pmPush();
 }
 
 function newChat(){
@@ -14414,10 +14436,10 @@ function openSheet(svc){
     cont.appendChild(_disc);
   }
   document.getElementById('sbg').classList.add('open');
-  history.pushState({podoai:true},'','');
+  _pmPush();
 }
-function closeSheet(){document.getElementById('sbg').classList.remove('open'); history.pushState({podoai:true},'','');}
-function closeUp(){document.getElementById('upbg').classList.remove('open'); history.pushState({podoai:true},'','');}
+function closeSheet(){document.getElementById('sbg').classList.remove('open'); _pmPush();}
+function closeUp(){document.getElementById('upbg').classList.remove('open'); _pmPush();}
 
 function sqCh(){
   var q=document.getElementById('sq').value.trim();
@@ -14439,7 +14461,7 @@ function openUp(){
   upStep=apiKey?'input':'intro';
   renderUp();
   document.getElementById('upbg').classList.add('open');
-  history.pushState({podoai:true},'','');
+  _pmPush();
 }
 
 var PAY_IMG1="pay1.jpg";
@@ -14530,7 +14552,7 @@ function verifyKey(){
 function showKE(m){var e=document.getElementById('kerr');if(e){e.textContent='⚠️ '+m;e.style.display='block';}}
 function hideKE(){var e=document.getElementById('kerr');if(e)e.style.display='none';}
 
-history.pushState({podoai:true},'','');
+_pmPush();
 try{ setTimeout(botCheck, 500); }catch(e){}   /* 🍇 포도톡에서 온 요청 확인 */
 /* 🔔 알림을 탭해서 들어온 경우 → 그 리포트를 바로 실행 (서버는 깨우기만 했다) */
 try{
@@ -14555,40 +14577,41 @@ window.addEventListener('popstate',function(){
     if(_top){
       if(typeof _top.__pmClose==='function') _top.__pmClose();
       else _top.style.display='none';
-      history.pushState({podoai:true},'','');
+      /* 여기서 다시 쌓으면 기록이 줄지 않아 뒤로가기로 영영 못 나간다.
+         닫기만 하고 그대로 둔다. */
       return;
     }
   }catch(e){}
   var nbg=document.getElementById('ainews-bg'), abg=document.getElementById('awork-bg'), vbg=document.getElementById('vmaker-bg');
-  if(nbg){ nbg.remove(); history.pushState({podoai:true},'',''); return; }
-  if(abg){ abg.remove(); history.pushState({podoai:true},'',''); return; }
-  if(vbg){ vbg.remove(); history.pushState({podoai:true},'',''); return; }
+  if(nbg){ nbg.remove(); _pmPush(); return; }
+  if(abg){ abg.remove(); _pmPush(); return; }
+  if(vbg){ vbg.remove(); _pmPush(); return; }
   var sbg=document.getElementById('sbg'), upbg=document.getElementById('upbg');
   var histbg=document.getElementById('histbg'), geminibg=document.getElementById('geminibg');
   var lsbg=document.getElementById('lsbg'), gallerybg=document.getElementById('gallerybg');
   var shortssavedbg=document.getElementById('shortssavedbg');
   var wplistbg=document.getElementById('wplistbg'), custombg=document.getElementById('custombg');
-  if(sbg&&sbg.classList.contains('open')){sbg.classList.remove('open');history.pushState({podoai:true},'','');return;}
-  if(upbg&&upbg.classList.contains('open')){upbg.classList.remove('open');history.pushState({podoai:true},'','');return;}
-  if(histbg&&histbg.classList.contains('open')){histbg.classList.remove('open');history.pushState({podoai:true},'','');return;}
-  if(geminibg&&geminibg.style.display==='flex'){geminibg.style.display='none';history.pushState({podoai:true},'','');return;}
-  if(lsbg&&lsbg.style.display==='flex'){lsbg.style.display='none';history.pushState({podoai:true},'','');return;}
-  if(gallerybg&&gallerybg.style.display==='flex'){gallerybg.style.display='none';history.pushState({podoai:true},'','');return;}
-  if(shortssavedbg&&shortssavedbg.style.display==='flex'){shortssavedbg.style.display='none';history.pushState({podoai:true},'','');return;}
-  if(wplistbg&&wplistbg.style.display==='flex'){wplistbg.style.display='none';history.pushState({podoai:true},'','');return;}
-  if(custombg&&custombg.style.display==='flex'){custombg.style.display='none';history.pushState({podoai:true},'','');return;}
+  if(sbg&&sbg.classList.contains('open')){sbg.classList.remove('open');_pmPush();return;}
+  if(upbg&&upbg.classList.contains('open')){upbg.classList.remove('open');_pmPush();return;}
+  if(histbg&&histbg.classList.contains('open')){histbg.classList.remove('open');_pmPush();return;}
+  if(geminibg&&geminibg.style.display==='flex'){geminibg.style.display='none';_pmPush();return;}
+  if(lsbg&&lsbg.style.display==='flex'){lsbg.style.display='none';_pmPush();return;}
+  if(gallerybg&&gallerybg.style.display==='flex'){gallerybg.style.display='none';_pmPush();return;}
+  if(shortssavedbg&&shortssavedbg.style.display==='flex'){shortssavedbg.style.display='none';_pmPush();return;}
+  if(wplistbg&&wplistbg.style.display==='flex'){wplistbg.style.display='none';_pmPush();return;}
+  if(custombg&&custombg.style.display==='flex'){custombg.style.display='none';_pmPush();return;}
   var spbg=document.getElementById('shorts-preview-bg');
   var wsb=document.getElementById('websearch-bg');
-  if(wsb&&wsb.style.display==='flex'){ closeWebSearchKey(); history.pushState({podoai:true},'',''); return; }
+  if(wsb&&wsb.style.display==='flex'){ closeWebSearchKey(); _pmPush(); return; }
   var nvb=document.getElementById('navi-bg');
-  if(nvb&&nvb.style.display==='flex'){ closeNavi(); history.pushState({podoai:true},'',''); return; }
+  if(nvb&&nvb.style.display==='flex'){ closeNavi(); _pmPush(); return; }
   var usb=document.getElementById('uniscreen-bg');
-  if(usb&&usb.style.display==='flex'){ closeUniScreen(); history.pushState({podoai:true},'',''); return; }
+  if(usb&&usb.style.display==='flex'){ closeUniScreen(); _pmPush(); return; }
   var vbg=document.getElementById('vans-bg');
-  if(vbg&&vbg.style.display==='flex'){ vansClose(); history.pushState({podoai:true},'',''); return; }
+  if(vbg&&vbg.style.display==='flex'){ vansClose(); _pmPush(); return; }
   var rxbg=document.getElementById('reel-export-bg');
-  if(rxbg&&rxbg.style.display==='flex'){ rxbg.style.display='none'; history.pushState({podoai:true},'',''); return; }
-  if(spbg&&spbg.style.display==='flex'){ _reelStop(); history.pushState({podoai:true},'',''); return; }
+  if(rxbg&&rxbg.style.display==='flex'){ rxbg.style.display='none'; _pmPush(); return; }
+  if(spbg&&spbg.style.display==='flex'){ _reelStop(); _pmPush(); return; }
   /* 🏠 메뉴(Podoya)가 맨 위면 → 하단 뒤로가기도 상단 '‹' 와 똑같이 홈으로.
      하위 화면(고급기능·런처앱·기능)이 열려 있으면 그쪽이 먼저 닫히도록 양보. */
   var _mnB=document.getElementById('podomenu-bg');
@@ -14599,7 +14622,7 @@ window.addEventListener('popstate',function(){
       _mnB.style.display='none';
       var _htM=document.querySelector('.t-home');
       if(_htM && typeof switchTab==='function'){ try{ switchTab('home', _htM); }catch(e){} }
-      history.pushState({podoai:true},'','');
+      _pmPush();
       return;
     }
   }
@@ -14608,15 +14631,15 @@ window.addEventListener('popstate',function(){
     var _asB=document.getElementById('assist-bg');
     if(_asB && _asB.style.display==='flex'){   /* 비서에서 들어온 화면이면 비서로 돌아간다 */
       if(_advf) _advf.style.display='none'; if(_adv) _adv.style.display='none';
-      history.pushState({podoai:true},'',''); return;
+      _pmPush(); return;
     }
-    if(_advf) _advf.style.display='none'; if(_adv) _adv.style.display='none'; var _mn=document.getElementById('podomenu-bg'); if(_mn){ _mn.style.display='flex'; } else { try{ openPodoMenu(); }catch(e){} } history.pushState({podoai:true},'',''); return; }
+    if(_advf) _advf.style.display='none'; if(_adv) _adv.style.display='none'; var _mn=document.getElementById('podomenu-bg'); if(_mn){ _mn.style.display='flex'; } else { try{ openPodoMenu(); }catch(e){} } _pmPush(); return; }
   var ids2=['ppt-bg','url-guide-sheet','carddetail-bg','cardscan-bg','cardlist-bg','voiceact-bg','navi-bg','briefing-bg','research-bg','workflow-bg','senior-bg','study-bg','travel-bg','fridge-bg','name-bg','fortune-bg','quiz-bg','obj-bg','ocr-bg','label-bg','biz-bg','ledger-bg','addappbg','myapplistbg','gworkspace-bg','navinbg','alimtalkbg','smsbg','mapbg','gcalbg','kcalbg','nshopbg','upbitbg','kweatherbg','gmailbg','brief-sched-bg','launch-bg','intl-bg','why-bg','doc-bg','report-bg','smarthome-bg','podome-bg','podoadvf-bg','podoadv-bg','assist-bg','podofeat-bg','podoapp-bg','podomenu-bg'];
-  for(var pi=0;pi<ids2.length;pi++){var pel=document.getElementById(ids2[pi]);if(pel&&pel.style.display==='flex'){pel.style.display='none';history.pushState({podoai:true},'','');return;}}
+  for(var pi=0;pi<ids2.length;pi++){var pel=document.getElementById(ids2[pi]);if(pel&&pel.style.display==='flex'){pel.style.display='none';_pmPush();return;}}
   var _cpB=document.getElementById('chatpanel'), _mpB=document.getElementById('mypanel');
-  if((_cpB&&_cpB.classList.contains('show'))||(_mpB&&_mpB.classList.contains('show'))){ var _htB=document.querySelector('.t-home'); if(_htB) switchTab('home',_htB); setTimeout(function(){ try{ openPodoMenu(); }catch(e){} }, 40); history.pushState({podoai:true},'',''); return; }
+  if((_cpB&&_cpB.classList.contains('show'))||(_mpB&&_mpB.classList.contains('show'))){ var _htB=document.querySelector('.t-home'); if(_htB) switchTab('home',_htB); setTimeout(function(){ try{ openPodoMenu(); }catch(e){} }, 40); _pmPush(); return; }
   var homeTab=document.querySelector('.t-home'); if(homeTab) switchTab('home',homeTab);
-  history.pushState({podoai:true},'','');
+  _pmPush();
 });
 
 // 외부 배달앱/페이지에서 뒤로가기로 Podoya에 돌아오면 음성비서를 다시 띄움
