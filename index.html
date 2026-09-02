@@ -2006,7 +2006,18 @@ function licRenderCard(){
   var el=document.getElementById('lic-card'); if(!el) return;
 
   if(!podoTok){
+    /* 왜 안 붙었는지 한 줄로 적어둔다. 이게 없으면 "말하기가 안 된다"
+       로만 보이고 원인을 찾을 길이 없다. */
+    var why='';
+    try{
+      var inFr = (window.top !== window.self);
+      var hasPt = /[?&]pt=/.test(String(location.search||''));
+      if(inFr && !hasPt) why='포도톡이 지갑을 안 넘겨줬어요 (설정 → 크레딧에서 지갑 만들기)';
+      else if(inFr && hasPt) why='지갑은 넘어왔는데 저장이 안 됐어요';
+      else why='이 주소로 직접 열었어요 · 아래에 지갑 번호를 넣어주세요';
+    }catch(e){}
     el.innerHTML='<div style="font-size:13.5px;font-weight:800;color:#1f2430">아직 연결되지 않았어요</div>'
+      +(why?'<div style="font-size:11px;color:#c2410c;margin-top:4px">'+why+'</div>':'')
       +'<div style="font-size:12px;color:#5b6178;margin-top:5px;line-height:1.6">'
       +'지금은 무료 기능만 쓰고 있어요. 포도톡에서 만든 <b>계정 지갑</b>을 아래에 넣으면 '
       +'포도톡 크레딧을 여기서도 그대로 씁니다.</div>';
