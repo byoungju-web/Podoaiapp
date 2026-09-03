@@ -2602,6 +2602,48 @@ function podoMakeTile(svc){
    을 닫으면 그 일이 다시 생기지 않는다. */
 var _pmStack = [];
 var _pmBackBusy = false;      /* 뒤로가기로 화면을 닫는 중인지 */
+
+/* ── 지금 화면을 덮고 있는 것 찾기 ──
+   화면마다 이름을 적어두는 방식은 새 화면이 생길 때마다 빠진다.
+   실제로 계속 빠졌다. 그래서 이름이 아니라 '모양' 으로 찾는다.
+   화면을 크게 덮고 있고, 위에 떠 있는(z-index 가 높은) 것이 지금 열린
+   화면이다. 종류가 무엇이든 상관없다. */
+function _pmOverlay(){
+  var best=null, bz=-1;
+  var all=document.body.getElementsByTagName('*');
+  for(var i=0;i<all.length;i++){
+    var el=all[i], cs;
+    try{ cs=getComputedStyle(el); }catch(e){ continue; }
+    if(cs.position!=='fixed') continue;
+    if(cs.display==='none'||cs.visibility==='hidden'||cs.opacity==='0') continue;
+    var z=parseInt(cs.zIndex,10); if(!isFinite(z)) z=0;
+    if(z<200) continue;                     /* 바닥 화면은 건드리지 않는다 */
+    var r=el.getBoundingClientRect();
+    if(r.width < window.innerWidth*0.6) continue;
+    if(r.height < window.innerHeight*0.4) continue;
+    if(z>=bz){ bz=z; best=el; }
+  }
+  return best;
+}
+
+/* 그 화면의 닫기 단추를 대신 눌러준다.
+   화면을 그냥 숨기면 그 화면이 하던 뒷정리(녹음 끄기·타이머 멈추기 등)가
+   안 된다. 사람이 X 를 누른 것과 똑같이 만들어야 탈이 없다. */
+function _pmForceClose(el){
+  if(!el) return false;
+  if(typeof el.__pmClose==='function'){ try{ el.__pmClose(); return true; }catch(e){} }
+  var CLOSE=['\u2715','\u00D7','\u2716','\u2573','X','x','\uB2EB\uAE30','\u2039','\u003C'];
+  var cand=el.querySelectorAll('button,a,div,span');
+  for(var j=0;j<cand.length;j++){
+    var t=(cand[j].textContent||'').trim();
+    if(t.length>2) continue;
+    for(var k=0;k<CLOSE.length;k++){
+      if(t===CLOSE[k]){ try{ cand[j].click(); return true; }catch(e){} }
+    }
+  }
+  try{ el.style.display='none'; return true; }catch(e){}
+  return false;
+}
 /* 포도톡 안에 끼워져 열렸는지. 그렇다면 방문기록(history)을 건드리면 안 된다.
    창 안에서 pushState 를 부르면 그 기록이 '포도톡 전체'의 기록에 쌓인다.
    그래서 포도톡에서 뒤로가기를 눌러도 밖으로 못 나가거나, 화면이 통째로
@@ -2637,12 +2679,19 @@ window.addEventListener('message', function(ev){
     /* 닫는 동안에는 기록을 새로 쌓지 않는다. 닫으면서 또 쌓으면
        뒤로가기를 눌러도 제자리를 맴돈다. */
     _pmBackBusy = true;
-    try{ window.dispatchEvent(new PopStateEvent('popstate', { state: null })); }
-    catch(e){
-      var t = _pmTop();
-      if(t){ if(typeof t.__pmClose === 'function') t.__pmClose(); else t.style.display='none'; }
-    }
-    setTimeout(function(){ _pmBackBusy = false; }, 0);
+    var before = _pmOverlay();
+    try{ window.dispatchEvent(new PopStateEvent('popstate', { state: null })); }catch(e){}
+    /* 원래 처리가 아무것도 못 닫았으면 — 이름 목록에 없는 화면이다 —
+       모양으로 찾아 그 화면의 닫기 단추를 대신 누른다. */
+    setTimeout(function(){
+      try{
+        if(before && document.contains(before)){
+          var cs=getComputedStyle(before);
+          if(cs.display!=='none' && cs.visibility!=='hidden') _pmForceClose(before);
+        }
+      }catch(e){}
+      _pmBackBusy = false;
+    }, 0);
   }catch(e){ _pmBackBusy = false; }
 });
 function _pmTop(){
@@ -4283,7 +4332,6 @@ function openPodoAssist(){
     _asRow('📮','발송 채널','결과를 어디로 받을지 (포도톡·텔레그램)','asDeliver()')+
     '<div style="font-size:11.5px;font-weight:800;color:#aaa;margin:18px 2px 6px">알리기 · 연결</div>'+
     _asRow('📣','친구에게 알리기','카톡으로 포도야 링크 보내기','podoShare()', {ok:true, t:'바로 됨'})+
-    _asRow('💬','포도톡 열기','손님·거래처와 채팅 (podotalk.kr)','podoTalkOpen()', {ok:true, t:'바로 됨'})+
     '<div style="font-size:11.5px;font-weight:800;color:#aaa;margin:18px 2px 6px">이 앱에 대해</div>'+
     _asRow('🔒','키는 이 폰에만','포도야 서버는 아무것도 안 가져가요','openWhy()')+
     '<div style="font-size:11px;color:#bbb;margin-top:16px;line-height:1.6;padding:0 2px">발송·환불처럼 되돌릴 수 없는 일은 실행 전에 항상 확인창을 띄워요.</div>';
