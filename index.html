@@ -2680,15 +2680,6 @@ function pmGoHome(){
   try{ if(typeof showHome==='function') showHome(); }catch(e){}
   try{ window.scrollTo(0,0); }catch(e){}
 }
-(function(){
-  /* 주소에 home=1 이 붙어 오면 처음 화면부터 시작한다 */
-  try{
-    if(/[?&]home=1/.test(String(location.search||''))){
-      setTimeout(function(){ try{ pmGoHome(); }catch(e){} }, 250);
-    }
-  }catch(e){}
-})();
-
 /* 포도톡에서 "한 겹 닫아라" 가 오면 화면 하나를 닫는다.
 
    이 앱에는 화면을 만드는 방식이 두 가지다.
