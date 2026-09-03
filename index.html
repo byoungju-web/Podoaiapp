@@ -2667,13 +2667,16 @@ function _pmPush(){
    그대로 있으면 눌러도 아무 일이 없는 것처럼 보인다. */
 function pmGoHome(){
   try{
-    /* 덮여 있는 화면을 전부 닫는다. 몇 겹이든 상관없다. */
+    /* 덮여 있는 화면을 전부 닫는다. 몇 겹이든 상관없다.
+       ★ 닫기만 하고 홈을 그리면 옛 화면이 남아 두 겹으로 보인다.
+         그래서 닫은 뒤 화면을 비우고 나서 홈을 그린다. */
     for(var i=0;i<12;i++){
       var el=_pmOverlay();
       if(!el) break;
       if(!_pmForceClose(el)) break;
     }
   }catch(e){}
+  try{ var m=M(); if(m) m.innerHTML=''; }catch(e){}
   try{ if(typeof showHome==='function') showHome(); }catch(e){}
   try{ window.scrollTo(0,0); }catch(e){}
 }
