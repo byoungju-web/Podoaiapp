@@ -2661,6 +2661,31 @@ function _pmPush(){
   try{ history.pushState({p:true},'',''); }catch(e){}
 }
 
+/* 포도톡에서 "처음 화면으로 가라" 가 오면 열린 것을 모두 닫고 홈으로.
+   포도야는 마지막에 보던 화면을 기억한다. 그래서 포도톡이 창을 새로
+   그려도 그 자리로 돌아왔다. 아래 포도AI 탭을 눌렀는데 마이 화면이
+   그대로 있으면 눌러도 아무 일이 없는 것처럼 보인다. */
+function pmGoHome(){
+  try{
+    /* 덮여 있는 화면을 전부 닫는다. 몇 겹이든 상관없다. */
+    for(var i=0;i<12;i++){
+      var el=_pmOverlay();
+      if(!el) break;
+      if(!_pmForceClose(el)) break;
+    }
+  }catch(e){}
+  try{ if(typeof showHome==='function') showHome(); }catch(e){}
+  try{ window.scrollTo(0,0); }catch(e){}
+}
+(function(){
+  /* 주소에 home=1 이 붙어 오면 처음 화면부터 시작한다 */
+  try{
+    if(/[?&]home=1/.test(String(location.search||''))){
+      setTimeout(function(){ try{ pmGoHome(); }catch(e){} }, 250);
+    }
+  }catch(e){}
+})();
+
 /* 포도톡에서 "한 겹 닫아라" 가 오면 화면 하나를 닫는다.
 
    이 앱에는 화면을 만드는 방식이 두 가지다.
@@ -2675,6 +2700,7 @@ window.addEventListener('message', function(ev){
   try{
     if(String(ev.origin||'').indexOf('podotalk.kr') < 0) return;
     var d = ev.data;
+    if(d && d.podoya === 'home'){ pmGoHome(); return; }
     if(!d || d.podoya !== 'back') return;
     /* 닫는 동안에는 기록을 새로 쌓지 않는다. 닫으면서 또 쌓으면
        뒤로가기를 눌러도 제자리를 맴돈다. */
