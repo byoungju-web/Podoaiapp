@@ -15,16 +15,44 @@
      배포할 때마다 아래 SHELL_CACHE 의 v 숫자를 올린다.
 
    ※ 2026-08-23 — .js 는 네트워크 우선(1.5초)으로 바꿨다.
-     앱 파일을 고칠 때마다 버전을 올리지 않아도 반영된다. */
+     앱 파일을 고칠 때마다 버전을 올리지 않아도 반영된다.
+
+   ※ 2026-09-03 — 깨진 종이 아이콘을 없앴다.
+     포도톡 안의 창(iframe)은 크롬이 별도 저장 칸으로 취급하므로 캐시가
+     비어 있다. 그래서 매번 화면을 새로 받아야 하는데, 그 받아오기가 한 번
+     실패하면 아무 대비 없이 그대로 실패했다. 화면 대신 깨진 종이가
+     떴고, 될 때도 있고 안 될 때도 있는 것으로 보였다.
+     이제 실패하면 잠깐 기다렸다 스스로 다시 불러온다. */
 
 var APP = './index.html';
-var SW_VER = '2026-09-03i';  // 이 값을 바꾸면 브라우저가 새 파일로 인식한다
+var SW_VER = '2026-09-03j';  // 이 값을 바꾸면 브라우저가 새 파일로 인식한다
 
 /* ── 셸 캐싱 설정 ───────────────────────────────────────── */
-var SHELL_CACHE = 'podoya-shell-v33';                   // 배포 때마다 v2, v3…
+var SHELL_CACHE = 'podoya-shell-v34';                   // 배포 때마다 v2, v3…
 var ROOT = new URL('./', self.location.href).href;      // 예: https://podoya.ai.kr/
 var SHELL = [ROOT, ROOT + 'manifest.json', ROOT + 'podo-192.png'];
 var JS_TIMEOUT = 1500;   // .js 를 이 시간 안에 못 받으면 캐시로 넘어간다
+
+/* 화면을 못 받았을 때 대신 내보내는 임시 화면.
+   깨진 종이 아이콘을 보여주는 대신 스스로 다시 불러온다.
+   실패가 계속되더라도 사용자는 "불러오는 중" 만 보게 되므로,
+   느린 곳에서 잠깐 실패한 것과 진짜 고장을 구별해 겁먹지 않는다. */
+function retryPage(){
+  var html =
+    '<!doctype html><html lang="ko"><head><meta charset="utf-8">' +
+    '<meta name="viewport" content="width=device-width,initial-scale=1"></head>' +
+    '<body style="margin:0;height:100vh;display:flex;align-items:center;' +
+    'justify-content:center;font:15px -apple-system,system-ui,sans-serif;' +
+    'color:#5b6178;background:#fff">' +
+    '<div style="text-align:center">🍇<div style="margin-top:10px">' +
+    '화면을 불러오는 중이에요…</div></div>' +
+    '<script>setTimeout(function(){location.reload();},1500);<\/script>' +
+    '</body></html>';
+  return new Response(html, {
+    status: 200,
+    headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' }
+  });
+}
 
 self.addEventListener('install', function(e){
   e.waitUntil(
@@ -90,13 +118,25 @@ self.addEventListener('fetch', function(e){
             if (res && res.ok) { try { c.put(ROOT, res.clone()); } catch (err) {} }
             return res;
           });
-          if (!hit) return net;                    // 캐시에 없으면 기다린다
+          /* ※ 2026-09-03 — 캐시에 없을 때가 문제였다.
+             전에는 여기서 net 을 그냥 돌려줬다. 그 받아오기가 실패하면
+             창에는 깨진 종이 아이콘이 떴다. 포도톡 안의 창은 저장 칸이
+             달라 캐시가 늘 비어 있으므로, 매번 이 길을 지난다.
+             이제 실패하면 한 번 더 해보고, 그것도 안 되면 스스로
+             다시 불러오는 임시 화면을 내보낸다. */
+          if (!hit) {
+            return net.catch(function(){
+              return fetch(req).catch(function(){ return retryPage(); });
+            });
+          }
           var late = new Promise(function(done){
             setTimeout(function(){ done(hit); }, 3000);
           });
           return Promise.race([ net.catch(function(){ return hit; }), late ]);
         });
-      }).catch(function(){ return fetch(req); })
+      }).catch(function(){
+        return fetch(req).catch(function(){ return retryPage(); });
+      })
     );
     return;
   }
