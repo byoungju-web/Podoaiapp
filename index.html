@@ -2667,16 +2667,26 @@ function _pmPush(){
    그대로 있으면 눌러도 아무 일이 없는 것처럼 보인다. */
 function pmGoHome(){
   try{
-    /* 덮여 있는 화면을 전부 닫는다. 몇 겹이든 상관없다.
-       ★ 닫기만 하고 홈을 그리면 옛 화면이 남아 두 겹으로 보인다.
-         그래서 닫은 뒤 화면을 비우고 나서 홈을 그린다. */
+    /* 덮여 있는 화면을 전부 닫는다. 몇 겹이든 상관없다. */
     for(var i=0;i<12;i++){
       var el=_pmOverlay();
       if(!el) break;
       if(!_pmForceClose(el)) break;
     }
   }catch(e){}
-  try{ var m=M(); if(m) m.innerHTML=''; }catch(e){}
+  /* ★ 손으로 화면을 비우면 안 된다.
+     마이 화면은 M() 이 아니라 mypanel 이라는 다른 칸이다. M() 만 비우면
+     마이가 그대로 덮여 있어 홈이 안 보인다. 실제로 그랬다.
+     이 앱에는 switchTab 이 있다. 마이·채팅·글쓰기 칸을 전부 내리고
+     홈을 띄운다. 있는 함수를 쓰는 편이 언제나 낫다. */
+  try{
+    if(typeof switchTab==='function'){
+      var tab=document.querySelector('.tab-item');     /* 첫 칸이 홈 */
+      switchTab('home', tab);
+      try{ window.scrollTo(0,0); }catch(e){}
+      return;
+    }
+  }catch(e){}
   try{ if(typeof showHome==='function') showHome(); }catch(e){}
   try{ window.scrollTo(0,0); }catch(e){}
 }
