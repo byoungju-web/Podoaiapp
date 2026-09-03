@@ -1991,15 +1991,27 @@ function callPodo(opts, onSuccess, onError){
   }).then(function(res){
     var d=res.d;
     if(res.s===402){                       /* 크레딧 부족 */
+      showToast('🍇 '+(d.error||'크레딧이 부족해요'),'rgba(0,0,0,.85)');
       onError(new Error('LIC:'+(d.error||'크레딧이 부족해요')));
       licFetchStatus(function(){ try{ licRenderCard(); }catch(e){} });
       return;
     }
-    if(!d || d.error) throw new Error((d&&d.error)||'응답을 받지 못했어요');
+    /* 실패하면 이유를 화면에 띄운다. 조용히 끝내면 "크레딧만 나가고
+       아무 일도 안 일어난다" 로만 보여서 원인을 찾을 수가 없다. */
+    if(!d || d.error){
+      showToast('⚠️ '+((d&&d.error)||('응답 없음 ('+res.s+')')),'rgba(0,0,0,.85)');
+      throw new Error((d&&d.error)||'응답을 받지 못했어요');
+    }
     if(licInfo && typeof d.left==='number') licInfo.balance = d.left;
     try{ licRenderCard(); }catch(e){}
     onSuccess((d.text||'').trim());
-  })['catch'](onError);
+  })['catch'](function(e){
+    try{
+      var m=String((e&&e.message)||e);
+      if(m.indexOf('LIC:')!==0) showToast('⚠️ '+m.slice(0,90),'rgba(0,0,0,.85)');
+    }catch(e2){}
+    onError(e);
+  });
 }
 
 function licRenderCard(){
@@ -5438,9 +5450,12 @@ function _recSendLic(blob, onFail){
     .then(function(res){
       if(over) return; over=true; clearTimeout(to);
       var d=res.d;
-      if(res.s===501){ onFail('off'); return; }        /* 서버에 준비 안 됨 — 조용히 넘어간다 */
+      if(res.s===501){ showToast('🎤 서버에 받아쓰기가 준비되지 않았어요','rgba(0,0,0,.85)'); onFail('off'); return; }
       if(res.s===402){ showToast('🍇 '+((d&&d.error)||'크레딧이 부족해요'),'rgba(0,0,0,.85)'); onFail('quota'); return; }
-      if(!d || !d.text){ onFail((d&&d.error)||'빈 결과'); return; }
+      if(!d || !d.text){
+        showToast('🎤 '+((d&&d.error)||('받아쓰기 실패 ('+res.s+')')),'rgba(0,0,0,.85)');
+        onFail((d&&d.error)||'빈 결과'); return;
+      }
       if(licInfo && typeof d.left==='number') licInfo.balance=d.left;
       _recApply(d.text);
     })['catch'](function(){ if(over) return; over=true; clearTimeout(to); onFail('연결 실패'); });
