@@ -2607,7 +2607,29 @@ var _pmStack = [];
    꺼지거나, 포도AI 탭만 안 열리는 일이 생긴다.
    창 안에서는 화면 위쪽의 '‹' 로만 닫는다. */
 function _inFrame(){ try{ return window.top !== window.self; }catch(e){ return true; } }
-function _pmPush(){ if(_inFrame()) return; try{ history.pushState({p:true},'',''); }catch(e){} }
+function _pmPush(){
+  if(_inFrame()){
+    /* 창 안에서는 내가 기록을 쌓지 않는다. 포도톡이 대신 쌓아준다.
+       그래야 기록이 한 곳에만 남아 뒤로가기가 어긋나지 않는다. */
+    try{ parent.postMessage({ podoya:'push' }, 'https://podotalk.kr'); }catch(e){}
+    return;
+  }
+  try{ history.pushState({p:true},'',''); }catch(e){}
+}
+
+/* 포도톡에서 "한 겹 닫아라" 가 오면 맨 위 화면을 닫는다.
+   화면 위쪽의 '‹' 를 누른 것과 똑같이 처리한다. */
+window.addEventListener('message', function(ev){
+  try{
+    if(String(ev.origin||'').indexOf('podotalk.kr') < 0) return;
+    var d = ev.data;
+    if(!d || d.podoya !== 'back') return;
+    var t = _pmTop();
+    if(!t) return;
+    if(typeof t.__pmClose === 'function') t.__pmClose();
+    else t.style.display = 'none';
+  }catch(e){}
+});
 function _pmTop(){
   for(var i=_pmStack.length-1;i>=0;i--){
     var el=document.getElementById(_pmStack[i]);
